@@ -74,14 +74,28 @@
     export LINE_CHANNEL_SECRET="您的 Channel Secret"
     ```
 
-### 步驟 3.3：啟動伺服器
+### 步驟 3.3：選擇部署平台與啟動伺服器
 
-使用 Uvicorn 啟動 FastAPI 應用程式。建議使用 `nohup` 或 Supervisor 等工具在背景運行。
+由於本專案是後端應用程式，您需要選擇一個適合運行 Python 應用程式的雲平台進行部署。
+
+**推薦的部署平台：**
+*   **雲伺服器 (VPS/VM)：** AWS EC2, Google Compute Engine, Azure Virtual Machines (適合有 Linux 基礎的用戶，需要手動配置 Nginx/Apache 反向代理)。
+*   **容器化平台：** Google Cloud Run, Azure Container Apps, AWS ECS/Fargate (適合使用 Docker 容器部署)。
+*   **PaaS 平台：** Heroku, Render (提供簡化的部署流程，但可能有免費方案限制)。
+
+**啟動伺服器 (適用於 VPS/VM 部署)：**
+
+1.  **安裝 Uvicorn：** 確保已安裝 `uvicorn` (在 3.1 步驟已包含)。
+2.  **啟動 FastAPI 應用程式：** 建議使用 `nohup` 或 Supervisor 等工具在背景運行。
 
 ```bash
 nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
 ```
-**網頁預覽存取：** 伺服器啟動後，直接訪問您的伺服器根 URL (例如 `https://your-server.com/`) 即可看到讀經計畫預覽網頁。
+**網頁預覽存取：** 伺服器啟動後，您需要將您的公開域名或 IP 地址指向這個服務。
+*   **公開網址格式：** `https://[您的伺服器網址]/`
+*   **Webhook 網址格式：** `https://[您的伺服器網址]/webhook`
+
+請確保您的伺服器防火牆和反向代理（如 Nginx/Apache）已配置正確，將外部流量導向到 Uvicorn 運行的 8000 埠。
 
 ### 步驟 3.4：設定 Webhook (與先前相同)
 
