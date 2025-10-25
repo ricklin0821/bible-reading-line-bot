@@ -11,6 +11,9 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, P
 
 from database import init_db, get_db, User, BiblePlan, BibleText
 from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text
+from api_routes import router as api_router
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # --- 環境變數設定 ---
 # 請使用者在部署時設定這些變數
@@ -24,6 +27,15 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 app = FastAPI()
 
 # 初始化資料庫
+
+# 包含 API 路由
+app.include_router(api_router)
+
+# 靜態檔案服務
+try:
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+except Exception as e:
+    print(f"Warning: Could not mount static directory: {e}")
 init_db()
 
 # --- 依賴項 ---
@@ -284,7 +296,9 @@ async def handle_webhook(request: Request):
 
 @app.get("/")
 def read_root():
-    """根路由，用於健康檢查"""
+    """根路由，提供網頁預覽介面"""
+    if os.path.exists("index.html"):
+        return FileResponse("index.html", media_type="text/html")
     return {"Hello": "Bible Reading Bot is running!"}
 
 # --- 排程任務 (用於每日推送) ---

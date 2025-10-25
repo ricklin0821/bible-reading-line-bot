@@ -1,0 +1,7 @@
+nohup: ignoring input
+INFO:     Started server process [3164]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    [Errno 98] error while attempting to bind on address ('0.0.0.0Warning: Could not mount static directory: Directory 'static' does not exist
+INFO:     127.0.0.1:37372 - "GET / HTTP/1.1" 200 OK
+uld not mount static directory: Directory 'static' does not exist
