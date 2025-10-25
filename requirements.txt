@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-multipart
+sqlalchemy
+line-bot-sdk
+pandas
+

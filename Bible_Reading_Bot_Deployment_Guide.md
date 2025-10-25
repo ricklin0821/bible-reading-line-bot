@@ -79,6 +79,90 @@
 由於本專案是後端應用程式，您需要選擇一個適合運行 Python 應用程式的雲平台進行部署。
 
 **推薦的部署平台：**
+*   **Google Cloud Run (推薦，有慷慨的免費額度)**：適合容器化部署，無需管理伺服器。
+*   **雲伺服器 (VPS/VM)：** AWS EC2, Google Compute Engine, Azure Virtual Machines (適合有 Linux 基礎的用戶，需要手動配置 Nginx/Apache 反向代理)。
+*   **PaaS 平台：** Heroku, Render (提供簡化的部署流程，但可能有免費方案限制)。
+
+---
+
+#### **A. Google Cloud Run 部署指南 (推薦)**
+
+Cloud Run 部署需要 Docker 容器化。
+
+1.  **創建 Dockerfile：** 在您的專案根目錄 (即 `bible-reading-line-bot/`) 創建一個名為 `Dockerfile` 的檔案，內容如下：
+    ```dockerfile
+    # 使用 Python 官方映像作為基礎
+    FROM python:3.11-slim
+
+    # 設定工作目錄
+    WORKDIR /app
+
+    # 複製依賴檔案
+    COPY requirements.txt .
+
+    # 安裝依賴
+    RUN pip install --no-cache-dir -r requirements.txt
+
+    # 複製專案檔案 (包括程式碼和資料)
+    COPY . .
+
+    # 執行資料準備和資料庫初始化
+    RUN python3 prepare_data.py && python3 database.py
+
+    # 啟動 Uvicorn 伺服器
+    # Cloud Run 會將流量導向 $PORT 環境變數指定的埠
+    CMD exec uvicorn main:app --host 0.0.0.0 --port $PORT
+    ```
+
+2.  **創建 requirements.txt：** 在專案根目錄創建 `requirements.txt`，列出所有 Python 依賴：
+    ```text
+    fastapi
+    uvicorn
+    python-multipart
+    sqlalchemy
+    line-bot-sdk
+    pandas
+    ```
+
+3.  **部署至 Cloud Run：**
+    *   **安裝 gcloud CLI** 並登入您的 Google Cloud 帳號。
+    *   **構建並推送 Docker 映像：**
+        ```bash
+        gcloud builds submit --tag gcr.io/[PROJECT-ID]/bible-bot
+        ```
+    *   **部署到 Cloud Run：**
+        ```bash
+        gcloud run deploy bible-bot --image gcr.io/[PROJECT-ID]/bible-bot \
+          --platform managed \
+          --region [YOUR-REGION] \
+          --allow-unauthenticated \
+          --set-env-vars LINE_CHANNEL_ACCESS_TOKEN="您的 Token",LINE_CHANNEL_SECRET="您的 Secret"
+        ```
+        *   將 `[PROJECT-ID]` 替換為您的 Google Cloud 專案 ID。
+        *   將 `[YOUR-REGION]` 替換為您選擇的區域 (例如 `asia-east1`)。
+        *   **重要：** 記得在部署時設定 LINE 的環境變數。
+
+4.  **獲取服務網址：** 部署完成後，Cloud Run 會提供一個公開的 HTTPS 服務網址，這就是您用於 Webhook 和網頁預覽的 `https://[您的伺服器網址]`。
+
+---
+
+#### **B. VPS/VM 部署指南 (傳統方式)**
+
+1.  **安裝 Uvicorn：** 確保已安裝 `uvicorn` (在 3.1 步驟已包含)。
+2.  **啟動 FastAPI 應用程式：** 建議使用 `nohup` 或 Supervisor 等工具在背景運行。
+
+```bash
+nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
+```
+**網頁預覽存取：** 伺服器啟動後，您需要將您的公開域名或 IP 地址指向這個服務。
+*   **公開網址格式：** `https://[您的伺服器網址]/`
+*   **Webhook 網址格式：** `https://[您的伺服器網址]/webhook`
+
+請確保您的伺服器防火牆和反向代理（如 Nginx/Apache）已配置正確，將外部流量導向到 Uvicorn 運行的 8000 埠。
+
+由於本專案是後端應用程式，您需要選擇一個適合運行 Python 應用程式的雲平台進行部署。
+
+**推薦的部署平台：**
 *   **雲伺服器 (VPS/VM)：** AWS EC2, Google Compute Engine, Azure Virtual Machines (適合有 Linux 基礎的用戶，需要手動配置 Nginx/Apache 反向代理)。
 *   **容器化平台：** Google Cloud Run, Azure Container Apps, AWS ECS/Fargate (適合使用 Docker 容器部署)。
 *   **PaaS 平台：** Heroku, Render (提供簡化的部署流程，但可能有免費方案限制)。
