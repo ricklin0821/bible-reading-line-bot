@@ -1,0 +1,317 @@
+import re
+import random
+import json
+from typing import Tuple, List, Dict, Any
+from sqlalchemy.orm import Session
+from linebot.v3.messaging import TextMessage
+
+from database import User, BiblePlan, BibleText
+
+# --- 輔助函數 ---
+
+def get_verses_for_reading(db: Session, reading_ref: str) -> List[Dict[str, Any]]:
+    """
+    根據經文範圍字串 (例如: '創1:1-3:24;太1:1-2:23') 獲取所有經文。
+    返回一個包含 {book_abbr, chapter, verse, text} 的列表。
+    """
+    all_verses = []
+    
+    # 處理多個閱讀範圍
+    refs = reading_ref.split(';')
+    
+    for ref in refs:
+        ref = ref.strip()
+        if not ref:
+            continue
+            
+        # 匹配書卷縮寫和章節範圍 (例如: 創1-3, 太1:1-2:23)
+        match = re.match(r'([^\d]+)(\d+)(?::(\d+))?(?:-(\d+)(?::(\d+))?)?', ref)
+        
+        if not match:
+            # 處理只有章節的情況 (例如: 創1)
+            match_chap = re.match(r'([^\d]+)(\d+)', ref)
+            if match_chap:
+                book_abbr, chap = match_chap.groups()
+                verses = db.query(BibleText).filter(
+                    BibleText.book_abbr == book_abbr,
+                    BibleText.chapter == int(chap)
+                ).all()
+                all_verses.extend([v.__dict__ for v in verses])
+            continue
+            
+        book_abbr, start_chap_str, start_verse_str, end_chap_str, end_verse_str = match.groups()
+        
+        start_chap = int(start_chap_str)
+        end_chap = int(end_chap_str) if end_chap_str else start_chap
+        start_verse = int(start_verse_str) if start_verse_str else 1
+        
+        # 複雜的經文範圍查詢
+        query = db.query(BibleText).filter(BibleText.book_abbr == book_abbr)
+        
+        if start_chap == end_chap:
+            # 單章範圍
+            query = query.filter(BibleText.chapter == start_chap)
+            
+            if start_verse_str:
+                # 節範圍
+                end_verse = int(end_verse_str) if end_verse_str else 999 # 假設一個很大的數
+                query = query.filter(BibleText.verse.between(start_verse, end_verse))
+        else:
+            # 跨章範圍
+            query = query.filter(BibleText.chapter.between(start_chap, end_chap))
+            
+            # 處理起始節和結束節
+            if start_verse_str:
+                # 排除起始章中在起始節之前的節
+                query = query.filter(
+                    (BibleText.chapter > start_chap) | 
+                    ((BibleText.chapter == start_chap) & (BibleText.verse >= start_verse))
+                )
+            
+            if end_verse_str:
+                end_verse = int(end_verse_str)
+                # 排除結束章中在結束節之後的節
+                query = query.filter(
+                    (BibleText.chapter < end_chap) |
+                    ((BibleText.chapter == end_chap) & (BibleText.verse <= end_verse))
+                )
+        
+        verses = query.order_by(BibleText.chapter, BibleText.verse).all()
+        all_verses.extend([v.__dict__ for v in verses])
+        
+    return all_verses
+
+def create_fill_in_the_blank_quiz(verse_data: Dict[str, Any]) -> Tuple[str, str]:
+    """
+    根據經文數據生成一個填充題。
+    選擇經文中一個關鍵詞或短語進行挖空。
+    """
+    text = verse_data['text']
+    
+    # 移除標點符號，方便分詞
+    clean_text = re.sub(r'[，。！？：「」；、]', ' ', text)
+    words = clean_text.split()
+    
+    # 過濾掉太短的詞 (例如: 的, 了, 是)
+    meaningful_words = [w for w in words if len(w) > 1 and w not in ['的', '了', '是', '在', '我', '你', '他', '她', '它', '這', '那', '與', '和', '都', '就', '又', '從', '到', '為', '因', '以', '所', '將', '必', '要', '向', '說', '看', '聽', '行', '來', '去', '上', '下', '中', '裡', '外', '已', '未', '更', '最']]
+    
+    if not meaningful_words:
+        # 如果沒有足夠的詞，選擇最長的詞
+        words_with_punc = re.findall(r'[\w]+|[，。！？：「」；、]', text)
+        meaningful_words = sorted([w for w in words_with_punc if re.match(r'[\w]+', w)], key=len, reverse=True)
+        if not meaningful_words:
+            return text, "無答案" # 實在無法生成題目
+        
+    # 隨機選擇一個詞作為答案
+    answer = random.choice(meaningful_words)
+    
+    # 挖空題目
+    # 使用正則表達式替換，確保只替換第一個出現的詞，避免重複挖空
+    quiz_text = re.sub(re.escape(answer), "[___]", text, 1)
+    
+    # 確保挖空後題目和答案不完全一樣 (例如: 經文只有一個詞)
+    if quiz_text == text:
+        return text, "無答案" # 實在無法生成題目
+        
+    return quiz_text, answer
+
+# --- 核心邏輯 ---
+
+def generate_quiz_for_user(db: Session, user: User) -> Tuple[Dict[str, Any], TextMessage]:
+    """
+    為使用者生成當天的 3 題填充題測驗。
+    返回 quiz_data 字典和第一道題目的 TextMessage。
+    """
+    
+    # 1. 獲取當天的讀經範圍
+    plan = db.query(BiblePlan).filter(
+        BiblePlan.plan_type == user.plan_type,
+        BiblePlan.day_number == user.current_day
+    ).first()
+    
+    if not plan:
+        raise ValueError("No reading plan found for today.")
+        
+    readings = plan.readings
+    
+    # 2. 獲取範圍內的所有經文
+    all_verses = get_verses_for_reading(db, readings)
+    
+    if not all_verses:
+        raise ValueError("No verses found for today's reading plan.")
+        
+    # 3. 從中隨機選取 3 節經文作為題目來源
+    # 確保選取的經文是獨一無二的，且能生成有效的題目
+    selected_verses = []
+    attempts = 0
+    while len(selected_verses) < 3 and attempts < 100:
+        verse = random.choice(all_verses)
+        ref = f"{verse['book_abbr']}{verse['chapter']}:{verse['verse']}"
+        if ref not in [f"{v['book_abbr']}{v['chapter']}:{v['verse']}" for v in selected_verses]:
+            quiz_text, answer = create_fill_in_the_blank_quiz(verse)
+            if answer != "無答案":
+                verse['quiz_text'] = quiz_text
+                verse['answer'] = answer
+                selected_verses.append(verse)
+        attempts += 1
+        
+    if len(selected_verses) < 3:
+        # 如果無法生成 3 題，則用已生成的題目填充，或簡化處理
+        # 這裡假設至少能生成 1 題
+        if not selected_verses:
+            raise ValueError("Could not generate any valid quiz question.")
+        
+        # 用第一道題重複填充到 3 題
+        while len(selected_verses) < 3:
+            selected_verses.append(selected_verses[0])
+
+    # 4. 構建測驗數據結構
+    quiz_data = {
+        "readings": readings,
+        "current_question_index": 0,
+        "questions": []
+    }
+    
+    for verse in selected_verses:
+        quiz_data["questions"].append({
+            "ref": f"{verse['book_abbr']}{verse['chapter']}:{verse['verse']}",
+            "quiz_text": verse['quiz_text'],
+            "full_verse": verse['text'],
+            "answer": verse['answer'],
+            "attempts": 0
+        })
+        
+    # 5. 準備第一道題目的訊息
+    first_question = quiz_data["questions"][0]
+    message_text = (
+        f"第 1 題 (共 3 題) - 經文：{first_question['ref']}\n\n"
+        f"{first_question['quiz_text']}\n\n"
+        "請輸入您認為正確的答案 (詞彙)。"
+    )
+    first_question_message = TextMessage(text=message_text)
+    
+    return quiz_data, first_question_message
+
+def process_quiz_answer(db: Session, user: User, answer: str) -> List[TextMessage]:
+    """
+    處理使用者提交的測驗答案。
+    返回一個包含回覆訊息的列表。
+    """
+    reply_messages = []
+    
+    try:
+        quiz_data = json.loads(user.quiz_data)
+        current_index = quiz_data["current_question_index"]
+        question = quiz_data["questions"][current_index]
+    except (json.JSONDecodeError, IndexError, KeyError):
+        return [TextMessage(text="測驗狀態錯誤，請重新開始測驗。")]
+
+    correct_answer = question["answer"]
+    user_answer = answer.strip().lower()
+    
+    # 答案比對 (忽略大小寫，並移除可能的空格)
+    is_correct = user_answer == correct_answer.strip().lower()
+    
+    if is_correct:
+        # 答對：給予高度肯定與情緒價值
+        affirmations = [
+            "太棒了！您完全答對了！🎉 您的記憶力真是驚人！",
+            "哇！完全正確！💯 真是個愛慕真理、勤奮讀經的好榜樣！",
+            "阿們！答案完全正確！🙏 願神的話語常在您心裡！",
+            "恭喜您！這題難不倒您！🌟 繼續保持這份對聖經的熱情！"
+        ]
+        reply_messages.append(TextMessage(text=random.choice(affirmations)))
+        
+        # 進入下一題
+        quiz_data["current_question_index"] += 1
+        user.quiz_data = json.dumps(quiz_data)
+        
+        if quiz_data["current_question_index"] < len(quiz_data["questions"]):
+            # 還有下一題
+            next_index = quiz_data["current_question_index"]
+            next_question = quiz_data["questions"][next_index]
+            message_text = (
+                f"第 {next_index + 1} 題 (共 {len(quiz_data['questions'])} 題) - 經文：{next_question['ref']}\n\n"
+                f"{next_question['quiz_text']}\n\n"
+                "請輸入您認為正確的答案 (詞彙)。"
+            )
+            reply_messages.append(TextMessage(text=message_text))
+        else:
+            # 測驗完成
+            user.quiz_state = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
+            reply_messages.append(TextMessage(text="所有題目都答對了！您真是太棒了！"))
+            
+    else:
+        # 答錯
+        question["attempts"] += 1
+        
+        if question["attempts"] == 1:
+            # 第一次答錯：回應填充題的經文，再次詢問答案
+            message_text = (
+                f"再想想看喔！😊\n\n"
+                f"這節經文是：{question['full_verse']}\n\n"
+                f"請問：{question['quiz_text']}\n\n"
+                "請再次輸入您的答案。"
+            )
+            reply_messages.append(TextMessage(text=message_text))
+            
+        elif question["attempts"] == 2:
+            # 第二次答錯：出示答案，並給予鼓勵
+            message_text = (
+                f"沒關係，再接再厲！💪\n\n"
+                f"正確答案是：**{correct_answer}**\n\n"
+                f"完整的經文是：{question['full_verse']}\n\n"
+            )
+            reply_messages.append(TextMessage(text=message_text))
+            
+            # 自動進入下一題
+            quiz_data["current_question_index"] += 1
+            
+            if quiz_data["current_question_index"] < len(quiz_data["questions"]):
+                # 還有下一題
+                next_index = quiz_data["current_question_index"]
+                next_question = quiz_data["questions"][next_index]
+                message_text = (
+                    f"讓我們繼續下一題吧！\n\n"
+                    f"第 {next_index + 1} 題 (共 {len(quiz_data['questions'])} 題) - 經文：{next_question['ref']}\n\n"
+                    f"{next_question['quiz_text']}\n\n"
+                    "請輸入您認為正確的答案 (詞彙)。"
+                )
+                reply_messages.append(TextMessage(text=message_text))
+            else:
+                # 測驗完成 (雖然有錯，但題目已結束)
+                user.quiz_state = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
+                reply_messages.append(TextMessage(text="今天的測驗結束了！無論結果如何，您願意花時間讀經和學習，就是最棒的！願神祝福您！"))
+                
+        # 更新測驗數據
+        user.quiz_data = json.dumps(quiz_data)
+        
+    return reply_messages
+    
+def get_daily_reading_text(db: Session, readings: str) -> str:
+    """
+    根據經文範圍字串獲取經文內容，用於每日推送。
+    """
+    all_verses = get_verses_for_reading(db, readings)
+    
+    if not all_verses:
+        return "今日經文範圍無法取得。"
+        
+    text_parts = []
+    current_ref = ""
+    
+    for verse in all_verses:
+        ref = f"{verse['book_abbr']}{verse['chapter']}:{verse['verse']}"
+        
+        # 檢查是否為新的一章或新的書卷
+        new_ref = f"{verse['book_abbr']}{verse['chapter']}"
+        if new_ref != current_ref:
+            text_parts.append(f"\n**{new_ref}**\n")
+            current_ref = new_ref
+            
+        text_parts.append(f"  {verse['verse']} {verse['text']}")
+        
+    return "".join(text_parts)
+
+# 由於 main.py 已經包含了 get_daily_reading_text 的邏輯，這裡不需要重複。
+# 這裡的 get_daily_reading_text 主要是為了方便在 quiz_generator.py 內部調用。
