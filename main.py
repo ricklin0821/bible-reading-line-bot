@@ -10,7 +10,7 @@ from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, ReplyMe
 from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, PostbackEvent
 
 from database import init_db, get_db, User, BiblePlan, BibleText
-from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text
+from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text, get_random_encouraging_verse
 from api_routes import router as api_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -304,22 +304,74 @@ def read_root():
 # --- 排程任務 (用於每日推送) ---
 
 # 實際部署時，這個函數會被一個外部的排程服務 (如 Celery Beat 或 Cron Job) 定期呼叫
-@app.post("/schedule/daily_push")
-def daily_push(db: Session = Depends(get_db), messaging_api: MessagingApi = Depends(get_messaging_api)):
-    """每日推送讀經計畫給所有使用者"""
-    today = date.today()
+@app.post("/schedule/daily_push/{push_time}")
+def daily_push(push_time: str, db: Session = Depends(get_db), messaging_api: MessagingApi = Depends(get_messaging_api)):
+    """
+    定時推送讀經計畫或提醒給使用者。
+    push_time 參數用於區分推送時間點:
+    - 'morning': 早上 6 點，發送當天讀經計畫，並將進度推進到下一天。
+    - 'noon', 'evening': 中午 12 點/下午 6 點，提醒未完成讀經的使用者。
+    - 'night': 晚上 11 點，最終提醒，並附帶隨機聖經金句鼓勵。
+    """
     
     # 找到所有已選擇計畫的使用者
-    users_to_push = db.query(User).filter(User.plan_type.isnot(None)).all()
+    users = db.query(User).filter(User.plan_type.isnot(None)).all()
     
-    for user in users_to_push:
-        # 檢查使用者是否已經在今天回報讀經，如果已經回報，則不推送
-        if user.last_read_date == today:
-            continue
+    # 獲取隨機金句的函數 (已在 quiz_generator 中實現)
+    
+    
+    pushed_count = 0
+    
+    for user in users:
+        # 檢查使用者是否已完成今天的讀經
+        is_completed = user.last_read_date == date.today()
+        
+        # ------------------------------------------------------------------
+        # 1. 早上 6 點 (morning): 推送當天計畫，並推進進度
+        # ------------------------------------------------------------------
+        if push_time == 'morning':
+            # 只有在早上才將進度推進到下一天
+            if is_completed:
+                # 如果已完成，則將進度推進到下一天
+                user.current_day += 1
+                user.last_read_date = None # 重置完成狀態
+                db.commit()
             
-        readings = get_current_reading_plan(db, user)
-        message = get_reading_plan_message(user, readings)
+            # 獲取當天的讀經範圍
+            readings = get_current_reading_plan(db, user)
+            
+            # morning 推送不檢查 is_completed，因為它是當天的第一次推送
+            message = get_reading_plan_message(user, readings)
+            send_message(user.line_user_id, [message], messaging_api)
+            pushed_count += 1
         
-        send_message(user.line_user_id, [message], messaging_api)
-        
-    return {"status": "success", "pushed_count": len(users_to_push)}
+        # ------------------------------------------------------------------
+        # 2. 中午/傍晚/晚上 (noon, evening, night): 提醒邏輯
+        # ------------------------------------------------------------------
+        elif push_time in ['noon', 'evening', 'night']:
+            # 只有在使用者尚未完成當天讀經時才發送提醒
+            if not is_completed:
+                readings = get_current_reading_plan(db, user)
+                
+                if push_time == 'night':
+                    # 晚上 11 點的最終鼓勵
+                    encouraging_verse_data = get_random_encouraging_verse(db)
+                    encouraging_text = encouraging_verse_data['text']
+                    encouraging_ref = encouraging_verse_data['reference']
+                    
+                    message_text = (
+                        f"【最終提醒：還差一點點！】\n您今天的讀經（{readings}）還沒完成喔！\n\n"
+                        f"「{encouraging_text}」({encouraging_ref})\n\n"
+                        "願這句經文鼓勵您。請趕快完成，並回覆「已讀完」來進行測驗！"
+                    )
+                else:
+                    # 中午和傍晚的提醒
+                    message_text = (
+                        f"【讀經提醒】\n別忘了今天的讀經計畫喔！\n範圍：{readings}\n\n"
+                        "請讀完後回覆「已讀完」或「回報讀經」來進行小測驗！"
+                    )
+                
+                send_message(user.line_user_id, [TextMessage(text=message_text)], messaging_api)
+                pushed_count += 1
+
+    return {"status": "success", "push_time": push_time, "pushed_count": pushed_count}

@@ -7,6 +7,46 @@ from linebot.v3.messaging import TextMessage
 
 from database import User, BiblePlan, BibleText
 
+# 鼓勵用的聖經金句範圍 (詩篇、箴言、新約書信等)
+ENCOURAGING_REFERENCES = [
+    # 詩篇
+    ("詩", 23, 1, 1), ("詩", 27, 1, 1), ("詩", 46, 1, 1), ("詩", 121, 1, 1),
+    # 箴言
+    ("箴", 3, 5, 5), ("箴", 16, 3, 3), ("箴", 18, 10, 10),
+    # 新約
+    ("太", 6, 33, 33), ("約", 14, 27, 27), ("羅", 8, 28, 28), ("林前", 10, 13, 13),
+    ("林後", 12, 9, 9), ("腓", 4, 6, 7), ("腓", 4, 13, 13), ("提後", 1, 7, 7),
+    ("來", 10, 24, 25), ("雅", 1, 2, 4), ("彼前", 5, 7, 7)
+]
+
+def get_random_encouraging_verse(db: Session) -> dict:
+    """從預設的鼓勵經文範圍中隨機抽取一節經文"""
+    
+    # 隨機選擇一個經文範圍
+    book_abbr, chap, start_v, end_v = random.choice(ENCOURAGING_REFERENCES)
+    
+    # 在選定的範圍內隨機選擇一節
+    verse_num = random.randint(start_v, end_v)
+    
+    # 從資料庫中查詢該節經文
+    verse = db.query(BibleText).filter(
+        BibleText.book_abbr == book_abbr,
+        BibleText.chapter == chap,
+        BibleText.verse == verse_num
+    ).first()
+    
+    if verse:
+        return {
+            "text": verse.text,
+            "reference": f"{verse.book_abbr}{verse.chapter}:{verse.verse}"
+        }
+    
+    # 如果找不到，則返回一個預設的鼓勵語
+    return {
+        "text": "你當剛強壯膽，不要懼怕，也不要驚惶，因為你無論往哪裡去，耶和華你的神必與你同在。",
+        "reference": "約書亞記 1:9"
+    }
+
 # --- 輔助函數 ---
 
 def get_verses_for_reading(db: Session, reading_ref: str) -> List[Dict[str, Any]]:
@@ -313,5 +353,3 @@ def get_daily_reading_text(db: Session, readings: str) -> str:
         
     return "".join(text_parts)
 
-# 由於 main.py 已經包含了 get_daily_reading_text 的邏輯，這裡不需要重複。
-# 這裡的 get_daily_reading_text 主要是為了方便在 quiz_generator.py 內部調用。

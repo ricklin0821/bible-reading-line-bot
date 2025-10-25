@@ -125,12 +125,21 @@
 由於 Cloud Run 會在沒有流量時縮減到零，傳統的 Cron Job 不適用。我們使用 **Google Cloud Scheduler** 來定時呼叫 API。
 
 1.  **啟用 Cloud Scheduler API：** 在 GCP Console 中啟用 **Cloud Scheduler API**。
-2.  **建立排程作業：** 在 Cloud Scheduler 介面中，建立一個新的作業：
-    *   **頻率 (Frequency)：** 每天早上 6 點 (例如：`0 6 * * *`)
+2. **建立排程作業：** 您需要建立 **四個** Cloud Scheduler 作業，分別對應四個提醒時間點：
+
+    | 作業名稱 | 頻率 (Cron) | URL 參數 | 說明 |
+    | :--- | :--- | :--- | :--- |
+    | `bible-push-morning` | `0 6 * * *` (每天 06:00) | `morning` | **首次推送：** 發送當天讀經計畫，並推進進度。 |
+    | `bible-push-noon` | `0 12 * * *` (每天 12:00) | `noon` | **第一次提醒：** 提醒未完成讀經的使用者。 |
+    | `bible-push-evening` | `0 18 * * *` (每天 18:00) | `evening` | **第二次提醒：** 提醒未完成讀經的使用者。 |
+    | `bible-push-night` | `0 23 * * *` (每天 23:00) | `night` | **最終鼓勵：** 最終提醒，並附帶隨機聖經金句鼓勵。 |
+
+    **設定細節：**
+
     *   **目標類型 (Target type)：** HTTP
-    *   **URL：** 貼上您的服務網址加上 `/schedule/daily_push` (例如：`https://bible-bot-xxxxxxx-an.a.run.app/schedule/daily_push`)
+    *   **URL：** 貼上您的服務網址加上 `/schedule/daily_push/[URL 參數]` (例如：`https://bible-bot-xxxxxxx-an.a.run.app/schedule/daily_push/morning`)
     *   **HTTP 方法 (HTTP method)：** POST
-    *   **重要：** 由於 Cloud Run 服務是公開的，您可能需要設定 **OIDC 令牌**以確保只有排程器可以呼叫此 API，但為簡化流程，您可以暫時跳過此步驟，或在 Cloud Run 服務設定中限制外部存取。
+    *   **重要：** 由於 Cloud Run 服務是公開的，您可能需要設定 **OIDC 令牌**以確保只有排程器可以呼叫此 API，但為簡化流程，您可以暫時跳過此步驟，或在 Cloud Run 服務設定中限制外部存取。。
 
 ## 4. 使用者操作指南
 
