@@ -51,38 +51,53 @@ class BibleText(Base):
 
 def init_db():
     # 創建所有表格
+    print("Creating database tables...")
     Base.metadata.create_all(bind=engine)
+    print("Database tables created.")
     
     db = SessionLocal()
     
     # 檢查是否已匯入資料
-    if db.query(BibleText).count() == 0:
+    bible_text_count = db.query(BibleText).count()
+    print(f"Current BibleText count: {bible_text_count}")
+    
+    if bible_text_count == 0:
         print("Importing Bible text data...")
         try:
             # 讀取 CSV 檔案
             bible_df = pd.read_csv('data/bible_text.csv')
+            print(f"Read {len(bible_df)} verses from CSV.")
             # 將 DataFrame 寫入資料庫
             bible_df.to_sql(BibleText.__tablename__, engine, if_exists='append', index=False)
             print(f"Successfully imported {len(bible_df)} verses.")
-        except FileNotFoundError:
-            print("Error: data/bible_text.csv not found. Please run prepare_data.py first.")
+        except FileNotFoundError as e:
+            print(f"Error: data/bible_text.csv not found - {e}")
         except Exception as e:
             print(f"Error importing Bible text: {e}")
+    else:
+        print("Bible text data already exists, skipping import.")
 
-    if db.query(BiblePlan).count() == 0:
+    bible_plan_count = db.query(BiblePlan).count()
+    print(f"Current BiblePlan count: {bible_plan_count}")
+    
+    if bible_plan_count == 0:
         print("Importing Bible plans data...")
         try:
             # 讀取 CSV 檔案
             plans_df = pd.read_csv('data/bible_plans.csv')
+            print(f"Read {len(plans_df)} plan entries from CSV.")
             # 將 DataFrame 寫入資料庫
             plans_df.to_sql(BiblePlan.__tablename__, engine, if_exists='append', index=False)
             print(f"Successfully imported {len(plans_df)} plan entries.")
-        except FileNotFoundError:
-            print("Error: data/bible_plans.csv not found. Please run prepare_data.py first.")
+        except FileNotFoundError as e:
+            print(f"Error: data/bible_plans.csv not found - {e}")
         except Exception as e:
             print(f"Error importing Bible plans: {e}")
+    else:
+        print("Bible plans data already exists, skipping import.")
             
     db.close()
+    print("Database initialization complete.")
 
 # 依賴項函數
 def get_db():
