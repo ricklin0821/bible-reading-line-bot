@@ -98,32 +98,12 @@ def handle_follow(event):
     # 發送歡迎訊息和計畫選擇 Flex Message
     welcome_message = TextMessage(text="歡迎加入一年讀經計畫！\n\n請先選擇您想進行的讀經計畫：")
     
-    # Flex Message for Plan Selection (簡化為文字訊息和 Postback)
+    # 簡化為純文字訊息，引導使用者回覆 1 或 2
     plan_selection_message = TextMessage(
         text="請選擇您的讀經計畫：\n\n"
              "1. 按卷順序計畫 (Canonical)：從創世記到啟示錄，一年讀完一遍。\n"
              "2. 平衡讀經計畫 (Balanced)：每日搭配舊約、新約、詩篇/箴言，一年讀完一遍。\n\n"
-             "請回覆「1」或「2」來選擇。",
-        quick_reply={
-            "items": [
-                {
-                    "type": "action",
-                    "action": {
-                        "type": "postback",
-                        "label": "1. 按卷順序計畫",
-                        "data": "action=select_plan&plan=Canonical"
-                    }
-                },
-                {
-                    "type": "action",
-                    "action": {
-                        "type": "postback",
-                        "label": "2. 平衡讀經計畫",
-                        "data": "action=select_plan&plan=Balanced"
-                    }
-                }
-            ]
-        }
+             "請回覆「1」或「2」來選擇。"
     )
     
     messaging_api: MessagingApi = next(get_messaging_api())
@@ -134,44 +114,7 @@ def handle_follow(event):
         )
     )
 
-@handler.add(PostbackEvent)
-def handle_postback(event):
-    """處理 Postback 事件 (例如：選擇讀經計畫)"""
-    data = event.postback.data
-    params = dict(item.split("=") for item in data.split("&"))
-    
-    db: Session = next(get_db())
-    line_user_id = event.source.user_id
-    user = db.query(User).filter(User.line_user_id == line_user_id).first()
-    messaging_api: MessagingApi = next(get_messaging_api())
-    
-    if params.get("action") == "select_plan" and user and not user.plan_type:
-        plan_type = params.get("plan")
-        if plan_type in ["Canonical", "Balanced"]:
-            user.plan_type = plan_type
-            user.start_date = date.today()
-            user.current_day = 1
-            db.commit()
-            
-            readings = get_current_reading_plan(db, user)
-            reading_message = get_reading_plan_message(user, readings)
-            
-            messaging_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[
-                        TextMessage(text=f"太棒了！您已選擇「{'按卷順序計畫' if plan_type == 'Canonical' else '平衡讀經計畫'}」。\n\n讓我們從今天開始吧！"),
-                        reading_message
-                    ]
-                )
-            )
-        else:
-            messaging_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text="無效的計畫選擇。請重新選擇。")]
-                )
-            )
+# PostbackEvent 處理已被移除，因為 Quick Reply 已被移除
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
