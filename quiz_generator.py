@@ -133,7 +133,12 @@ def generate_quiz_for_user(user: User) -> Tuple[Dict[str, Any], TextMessage]:
     """
     
     # 1. 獲取當天的讀經範圍
-    readings = BiblePlan.get_by_plan_and_day(user.plan_type, user.current_day)
+    plan = BiblePlan.get_by_day(user['plan_type'], user['current_day'])
+    
+    if not plan:
+        raise ValueError("No reading plan found for today.")
+    
+    readings = plan['readings']
     
     if not readings:
         raise ValueError("No reading plan found for today.")
@@ -196,19 +201,19 @@ def generate_quiz_for_user(user: User) -> Tuple[Dict[str, Any], TextMessage]:
     
     return quiz_data, first_question_message
 
-def process_quiz_answer(user: User, answer: str) -> List[TextMessage]:
+def process_quiz_answer(user: dict, answer: str) -> tuple:
     """
     處理使用者提交的測驗答案。
-    返回一個包含回覆訊息的列表。
+    返回 (reply_messages, updated_user) 元組。
     """
     reply_messages = []
     
     try:
-        quiz_data = json.loads(user.quiz_data)
+        quiz_data = json.loads(user['quiz_data'])
         current_index = quiz_data["current_question_index"]
         question = quiz_data["questions"][current_index]
     except (json.JSONDecodeError, IndexError, KeyError):
-        return [TextMessage(text="測驗狀態錯誤，請重新開始測驗。")]
+        return [TextMessage(text="測驗狀態錯誤，請重新開始測驗。")], user
 
     correct_answer = question["answer"]
     user_answer = answer.strip().lower()
@@ -228,7 +233,7 @@ def process_quiz_answer(user: User, answer: str) -> List[TextMessage]:
         
         # 進入下一題
         quiz_data["current_question_index"] += 1
-        user.quiz_data = json.dumps(quiz_data)
+        user['quiz_data'] = json.dumps(quiz_data)
         
         if quiz_data["current_question_index"] < len(quiz_data["questions"]):
             # 還有下一題
@@ -242,7 +247,7 @@ def process_quiz_answer(user: User, answer: str) -> List[TextMessage]:
             reply_messages.append(TextMessage(text=message_text))
         else:
             # 測驗完成
-            user.quiz_state = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
+            user['quiz_state'] = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
             reply_messages.append(TextMessage(text="所有題目都答對了！您真是太棒了！"))
             
     else:
@@ -284,13 +289,13 @@ def process_quiz_answer(user: User, answer: str) -> List[TextMessage]:
                 reply_messages.append(TextMessage(text=message_text))
             else:
                 # 測驗完成 (雖然有錯，但題目已結束)
-                user.quiz_state = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
+                user['quiz_state'] = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
                 reply_messages.append(TextMessage(text="今天的測驗結束了！無論結果如何，您願意花時間讀經和學習，就是最棒的！願神祝福您！"))
                 
         # 更新測驗數據
-        user.quiz_data = json.dumps(quiz_data)
+        user['quiz_data'] = json.dumps(quiz_data)
         
-    return reply_messages
+    return reply_messages, user
     
 def get_daily_reading_text(readings: str) -> str:
     """
