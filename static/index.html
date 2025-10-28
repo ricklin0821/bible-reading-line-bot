@@ -44,6 +44,30 @@
             opacity: 0.9;
         }
 
+        .admin-link {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .admin-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        header {
+            position: relative;
+        }
+
         .content {
             padding: 40px 20px;
         }
@@ -311,6 +335,7 @@
 <body>
     <div class="container">
         <header>
+            <a href="/admin" class="admin-link">🔒 管理後台</a>
             <h1>📖 一年讀經計畫</h1>
             <p>預覽與規劃您的讀經之旅</p>
         </header>

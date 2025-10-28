@@ -19,8 +19,6 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, P
 from database import init_db, get_db, User, BiblePlan, BibleText
 from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text, get_random_encouraging_verse
 from api_routes import router as api_router
-from admin_routes import router as admin_router
-from admin_auth import router as admin_auth_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -36,22 +34,13 @@ app = FastAPI()
 
 # 包含 API 路由
 app.include_router(api_router)
-app.include_router(admin_router)
-app.include_router(admin_auth_router)
 
 # 靜態檔案服務
 try:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 except Exception as e:
     print(f"Warning: Could not mount static directory: {e}")
-
-# 在應用啟動時執行一次資料庫初始化
-@app.on_event("startup")
-async def startup_event():
-    print("Application startup: Checking Firestore database...")
-    # 注意：首次啟動時如果需要匯入資料，可能會超時
-    # 建議先使用 import_data_to_firestore.py 手動匯入資料
-    init_db()
+init_db()
 
 # --- 聖經書卷對照表 ---
 BIBLE_BOOK_MAP = {
@@ -195,37 +184,12 @@ def send_message(line_user_id: str, messages: list[TextMessage | FlexMessage], m
     except Exception as e:
         print(f"Error sending message to {line_user_id}: {e}")
 
-
-def get_all_users_with_plan():
-    """獲取所有已選擇讀經計畫的使用者"""
-    from database import db, USERS_COLLECTION
-    users_ref = db.collection(USERS_COLLECTION)
-    query = users_ref.where('plan_type', '!=', None)
-    docs = query.stream()
-    
-    users = []
-    for doc in docs:
-        data = doc.to_dict()
-        user = User(
-            line_user_id=data['line_user_id'],
-            plan_type=data.get('plan_type'),
-            start_date=data.get('start_date'),
-            current_day=data.get('current_day', 1),
-            last_read_date=data.get('last_read_date'),
-            quiz_state=data.get('quiz_state', 'IDLE'),
-            quiz_data=data.get('quiz_data', '{}')
-        )
-        user._doc_id = doc.id
-        users.append(user)
-    
-    return users
-
 def get_current_reading_plan(db, user: User) -> str:
     """獲取使用者當天的讀經計畫內容 (原始字串)"""
     plan = BiblePlan.get_by_plan_and_day(user.plan_type, user.current_day)
     
     if plan:
-        return plan
+        return plan.readings
     return "今日無讀經計畫或計畫已完成。"
 
 def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
@@ -339,27 +303,16 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
 
 @handler.add(FollowEvent)
 def handle_follow(event):
-    """（已修正） 處理使用者加入好友事件，使用按鈕選擇計畫"""
+    """(已修正) 處理使用者加入好友事件，使用按鈕選擇計畫"""
     db = next(get_db())
     line_user_id = event.source.user_id
-    
-    # 取得使用者顯示名稱
-    messaging_api: MessagingApi = next(get_messaging_api())
-    try:
-        profile = messaging_api.get_profile(line_user_id)
-        display_name = profile.display_name
-    except:
-        display_name = None
     
     user = User.get_by_line_user_id(line_user_id)
     
     if not user:
-        new_user = User(line_user_id=line_user_id, plan_type=None, display_name=display_name)
-        new_user.save()
-    elif not user.display_name and display_name:
-        # 更新現有使用者的顯示名稱
-        user.display_name = display_name
-        user.save()
+        new_user = User(line_user_id=line_user_id, plan_type=None)
+        db.add(new_user)
+        db.commit()
     
     welcome_message = TextMessage(text="歡迎加入一年讀經計畫！\n\n請先選擇您想進行的讀經計畫：")
     
@@ -417,10 +370,11 @@ def handle_message(event):
             user.plan_type = selected_plan
             user.start_date = date.today()
             user.current_day = 1
-            user.save()
+            db.commit()
             
             reply_text = f"太棒了！您已選擇「{plan_name}」。\n\n我們將從今天 (第 1 天) 開始！"
             
+            db.refresh(user) 
             readings = get_current_reading_plan(db, user)
             plan_message = get_reading_plan_message(user, readings) 
             
@@ -465,11 +419,11 @@ def handle_message(event):
             
         # 開始生成測驗
         try:
-            quiz_data, first_question_message = generate_quiz_for_user(user)
+            quiz_data, first_question_message = generate_quiz_for_user(db, user)
             
             user.quiz_state = "WAITING_ANSWER"
             user.quiz_data = json.dumps(quiz_data)
-            user.save()
+            db.commit()
             
             messaging_api.reply_message(
                 ReplyMessageRequest(
@@ -489,7 +443,7 @@ def handle_message(event):
 
     # --- 處理測驗答案 ---
     if user.quiz_state == "WAITING_ANSWER":
-        reply_messages = process_quiz_answer(user, text)
+        reply_messages = process_quiz_answer(db, user, text)
         
         # 檢查是否完成測驗
         if user.quiz_state == "QUIZ_COMPLETED":
@@ -497,7 +451,7 @@ def handle_message(event):
             user.current_day += 1 
             user.quiz_state = "IDLE"
             user.quiz_data = "{}"
-            user.save()
+            db.commit()
             
             next_day_user = User.get_by_line_user_id(line_user_id)
             next_day_readings = get_current_reading_plan(db, next_day_user)
@@ -506,7 +460,7 @@ def handle_message(event):
             reply_messages.append(TextMessage(text="恭喜您！今天的讀經與測驗都完成了！\n\n這是您明天的讀經計畫："))
             reply_messages.append(next_day_message)
         else:
-            user.save() 
+            db.commit() 
             
         messaging_api.reply_message(
             ReplyMessageRequest(
@@ -559,8 +513,10 @@ async def handle_webhook(request: Request):
 
 @app.get("/")
 def read_root():
-    """根路由，顯示讀經計畫首頁"""
-    return FileResponse("static/index.html", media_type="text/html")
+    """根路由，提供網頁預覽介面"""
+    if os.path.exists("index.html"):
+        return FileResponse("index.html", media_type="text/html")
+    return {"Hello": "Bible Reading Bot is running!"}
 
 # --- 排程任務 (用於每日推送) ---
 
@@ -570,7 +526,7 @@ def daily_push(push_time: str, db = Depends(get_db), messaging_api: MessagingApi
     定時推送讀經計畫或提醒給使用者。
     """
     
-    users = get_all_users_with_plan()
+    users = db.query(User).filter(User.plan_type.isnot(None)).all()
     
     pushed_count = 0
     
@@ -586,8 +542,9 @@ def daily_push(push_time: str, db = Depends(get_db), messaging_api: MessagingApi
                  pass
             elif user.last_read_date == yesterday:
                  user.current_day += 1
-                 user.save()
+                 db.commit()
             
+            db.refresh(user) 
             readings = get_current_reading_plan(db, user)
             
             message = get_reading_plan_message(user, readings) 
@@ -602,7 +559,7 @@ def daily_push(push_time: str, db = Depends(get_db), messaging_api: MessagingApi
                 readings = get_current_reading_plan(db, user)
                 
                 if push_time == 'night':
-                    encouraging_verse_data = get_random_encouraging_verse()
+                    encouraging_verse_data = get_random_encouraging_verse(db)
                     encouraging_text = encouraging_verse_data['text']
                     encouraging_ref = encouraging_verse_data['reference']
                     

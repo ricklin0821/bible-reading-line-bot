@@ -354,7 +354,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <script>
+        // 認證檢查
+        const adminAuth = sessionStorage.getItem('adminAuth');
+        if (!adminAuth) {
+            window.location.href = '/admin/login';
+        }
+
         // 全域變數
+        const authHeader = 'Basic ' + adminAuth;
         let statsData = null;
         let usersData = null;
         let currentSort = { by: 'current_day', order: 'desc' };
@@ -388,7 +395,7 @@
             try {
                 const response = await fetch('/admin/stats/overview', {
                     headers: {
-                        'Authorization': 'Basic ' + btoa('admin:bible2025')
+                        'Authorization': authHeader
                     }
                 });
 
@@ -498,7 +505,7 @@
 
                 const response = await fetch(`/admin/users?${params}`, {
                     headers: {
-                        'Authorization': 'Basic ' + btoa('admin:bible2025')
+                        'Authorization': authHeader
                     }
                 });
 
@@ -513,7 +520,7 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>LINE User ID</th>
+                                <th>使用者名稱</th>
                                 <th>讀經計畫</th>
                                 <th>當前天數</th>
                                 <th>進度</th>
@@ -522,8 +529,11 @@
                         </thead>
                         <tbody>
                             ${usersData.map(user => `
-                                <tr onclick="showUserDetail('${user.id}')">
-                                    <td>${user.line_user_id}</td>
+                                <tr onclick="showUserDetail('${user.id}')" style="cursor: pointer;">
+                                    <td>
+                                        <strong>${user.display_name || '未設定'}</strong><br>
+                                        <small style="color: #999;">${user.line_user_id}</small>
+                                    </td>
                                     <td><span class="badge badge-info">${user.plan_type}</span></td>
                                     <td>${user.current_day} / 365</td>
                                     <td>
@@ -568,7 +578,7 @@
             try {
                 const response = await fetch(`/admin/users/${userId}`, {
                     headers: {
-                        'Authorization': 'Basic ' + btoa('admin:bible2025')
+                        'Authorization': authHeader
                     }
                 });
 
@@ -579,6 +589,7 @@
                 alert(`
 使用者詳細資料
 
+使用者名稱: ${user.display_name || '未設定'}
 LINE User ID: ${user.line_user_id}
 讀經計畫: ${user.plan_type}
 當前天數: ${user.current_day} / 365

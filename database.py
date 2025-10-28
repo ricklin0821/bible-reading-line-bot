@@ -50,7 +50,7 @@ def user_doc_to_dict(doc):
 class User:
     """使用者類別，模擬 ORM 模型"""
     def __init__(self, line_user_id, plan_type=None, start_date=None, current_day=1, 
-                 last_read_date=None, quiz_state="IDLE", quiz_data="{}"):
+                 last_read_date=None, quiz_state="IDLE", quiz_data="{}", display_name=None):
         self.line_user_id = line_user_id
         self.plan_type = plan_type
         self.start_date = start_date
@@ -58,6 +58,7 @@ class User:
         self.last_read_date = last_read_date
         self.quiz_state = quiz_state
         self.quiz_data = quiz_data
+        self.display_name = display_name
     
     @staticmethod
     def get_by_line_user_id(line_user_id):
@@ -75,7 +76,8 @@ class User:
                 current_day=data.get('current_day', 1),
                 last_read_date=data.get('last_read_date'),
                 quiz_state=data.get('quiz_state', 'IDLE'),
-                quiz_data=data.get('quiz_data', '{}')
+                quiz_data=data.get('quiz_data', '{}'),
+                display_name=data.get('display_name')
             )
             user._doc_id = doc.id
             return user
@@ -92,7 +94,8 @@ class User:
             'current_day': self.current_day,
             'last_read_date': date_to_firestore(self.last_read_date),
             'quiz_state': self.quiz_state,
-            'quiz_data': self.quiz_data
+            'quiz_data': self.quiz_data,
+            'display_name': self.display_name
         }
         
         if hasattr(self, '_doc_id'):

@@ -164,6 +164,7 @@ def get_all_users(
         user_info = {
             "id": user_doc.id,
             "line_user_id": user_data.get('line_user_id', 'Unknown'),
+            "display_name": user_data.get('display_name', '未設定'),
             "plan_type": user_data.get('plan_type', '未選擇'),
             "current_day": user_data.get('current_day', 1),
             "start_date": start_date,
@@ -230,6 +231,7 @@ def get_user_detail(user_id: str, admin: str = Depends(verify_admin)):
     return {
         "id": user_doc.id,
         "line_user_id": user_data.get('line_user_id'),
+        "display_name": user_data.get('display_name', '未設定'),
         "plan_type": plan_type,
         "current_day": current_day,
         "start_date": start_date,
@@ -254,6 +256,7 @@ def export_users_csv(admin: str = Depends(verify_admin)):
     # 寫入標題
     writer.writerow([
         'LINE User ID',
+        '使用者名稱',
         '讀經計畫',
         '當前天數',
         '進度百分比',
@@ -288,6 +291,7 @@ def export_users_csv(admin: str = Depends(verify_admin)):
         
         writer.writerow([
             user_data.get('line_user_id', ''),
+            user_data.get('display_name', '未設定'),
             user_data.get('plan_type', '未選擇'),
             current_day,
             f"{progress_percent}%",
