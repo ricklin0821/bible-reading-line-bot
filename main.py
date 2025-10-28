@@ -1,7 +1,7 @@
 import os
 import json
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import FastAPI, Request, HTTPException, Depends
@@ -584,7 +584,12 @@ def daily_push(push_time: str, db = Depends(get_db), messaging_api: MessagingApi
     pushed_count = 0
     
     for user in users:
-        is_completed = user.last_read_date == date.today()
+        # 修正: 確保日期比較正確（處理 datetime 與 date 的差異）
+        today = date.today()
+        last_read = user.last_read_date
+        if isinstance(last_read, datetime):
+            last_read = last_read.date()
+        is_completed = last_read == today
         
         # ------------------------------------------------------------------
         # 1. 早上 6 點 (morning): 推送當天計畫

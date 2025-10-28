@@ -77,8 +77,10 @@ def generate_canonical_plan(df):
     """生成按卷順序讀經計畫 (每日約 3 章)"""
     print("Generating Canonical Plan...")
     
-    # 獲取所有書卷和章節，並保持順序
-    all_chapters_df = df.groupby(['book', 'chapter']).first().reset_index()[['book', 'chapter', 'book_abbr']]
+    # 獲取所有書卷和章節，並保持原始順序（按照 ID 排序）
+    all_chapters_df = df.groupby(['book', 'chapter'], sort=False).first().reset_index()[['book', 'chapter', 'book_abbr']]
+    # 確保按照原始經文順序排列
+    all_chapters_df = all_chapters_df.drop_duplicates(subset=['book', 'chapter']).reset_index(drop=True)
     all_chapters = list(all_chapters_df.itertuples(index=False, name=None))
             
     total_chapters = len(all_chapters)
