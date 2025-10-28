@@ -1,111 +1,226 @@
 import pandas as pd
-from sqlalchemy import create_engine, Column, Integer, String, Date, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from google.cloud import firestore
 from datetime import date
+import os
 
-# SQLite 資料庫檔案路徑
-SQLALCHEMY_DATABASE_URL = "sqlite:///./bible_plan.db"
+# 初始化 Firestore 客戶端
+db = firestore.Client()
 
-# 創建 SQLAlchemy 引擎
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# --- Firestore 集合名稱 ---
+USERS_COLLECTION = "users"
+BIBLE_PLANS_COLLECTION = "bible_plans"
+BIBLE_TEXT_COLLECTION = "bible_text"
 
-Base = declarative_base()
+# --- 輔助函數：將 Firestore 文檔轉換為字典 ---
 
-# --- ORM 模型定義 ---
+def user_doc_to_dict(doc):
+    """將 Firestore 使用者文檔轉換為字典"""
+    if not doc.exists:
+        return None
+    data = doc.to_dict()
+    data['id'] = doc.id
+    # 將 Firestore 的 Timestamp 轉換為 Python date
+    if 'start_date' in data and data['start_date']:
+        data['start_date'] = data['start_date'].date() if hasattr(data['start_date'], 'date') else data['start_date']
+    if 'last_read_date' in data and data['last_read_date']:
+        data['last_read_date'] = data['last_read_date'].date() if hasattr(data['last_read_date'], 'date') else data['last_read_date']
+    return data
 
-class User(Base):
-    __tablename__ = "users"
+# --- 使用者操作 ---
 
-    id = Column(Integer, primary_key=True, index=True)
-    line_user_id = Column(String, unique=True, index=True, nullable=False)
-    plan_type = Column(String, default=None)  # 'Canonical' 或 'Balanced'
-    start_date = Column(Date, default=date.today)
-    current_day = Column(Integer, default=1)
-    last_read_date = Column(Date, default=None)
-    quiz_state = Column(String, default="IDLE") # IDLE, WAITING_ANSWER, QUIZ_COMPLETED
-    quiz_data = Column(Text, default="{}") # 儲存當前測驗的 JSON 數據
+class User:
+    """使用者類別，模擬 ORM 模型"""
+    def __init__(self, line_user_id, plan_type=None, start_date=None, current_day=1, 
+                 last_read_date=None, quiz_state="IDLE", quiz_data="{}"):
+        self.line_user_id = line_user_id
+        self.plan_type = plan_type
+        self.start_date = start_date
+        self.current_day = current_day
+        self.last_read_date = last_read_date
+        self.quiz_state = quiz_state
+        self.quiz_data = quiz_data
+    
+    @staticmethod
+    def get_by_line_user_id(line_user_id):
+        """根據 LINE 使用者 ID 獲取使用者"""
+        users_ref = db.collection(USERS_COLLECTION)
+        query = users_ref.where('line_user_id', '==', line_user_id).limit(1)
+        docs = query.stream()
+        
+        for doc in docs:
+            data = user_doc_to_dict(doc)
+            user = User(
+                line_user_id=data['line_user_id'],
+                plan_type=data.get('plan_type'),
+                start_date=data.get('start_date'),
+                current_day=data.get('current_day', 1),
+                last_read_date=data.get('last_read_date'),
+                quiz_state=data.get('quiz_state', 'IDLE'),
+                quiz_data=data.get('quiz_data', '{}')
+            )
+            user._doc_id = doc.id
+            return user
+        return None
+    
+    def save(self):
+        """儲存或更新使用者到 Firestore"""
+        users_ref = db.collection(USERS_COLLECTION)
+        
+        user_data = {
+            'line_user_id': self.line_user_id,
+            'plan_type': self.plan_type,
+            'start_date': self.start_date,
+            'current_day': self.current_day,
+            'last_read_date': self.last_read_date,
+            'quiz_state': self.quiz_state,
+            'quiz_data': self.quiz_data
+        }
+        
+        if hasattr(self, '_doc_id'):
+            # 更新現有文檔
+            users_ref.document(self._doc_id).set(user_data)
+        else:
+            # 創建新文檔
+            doc_ref = users_ref.add(user_data)
+            self._doc_id = doc_ref[1].id
 
-class BiblePlan(Base):
-    __tablename__ = "bible_plans"
+# --- 讀經計畫操作 ---
 
-    id = Column(Integer, primary_key=True, index=True)
-    plan_type = Column(String, nullable=False)
-    day_number = Column(Integer, nullable=False)
-    readings = Column(String, nullable=False)
+class BiblePlan:
+    """讀經計畫類別"""
+    @staticmethod
+    def get_by_plan_and_day(plan_type, day_number):
+        """根據計畫類型和天數獲取讀經計畫"""
+        plans_ref = db.collection(BIBLE_PLANS_COLLECTION)
+        query = plans_ref.where('plan_type', '==', plan_type).where('day_number', '==', day_number).limit(1)
+        docs = query.stream()
+        
+        for doc in docs:
+            data = doc.to_dict()
+            return data.get('readings')
+        return None
 
-class BibleText(Base):
-    __tablename__ = "bible_text"
+# --- 聖經經文操作 ---
 
-    id = Column(Integer, primary_key=True, index=True)
-    book_abbr = Column(String, nullable=False) # 書卷縮寫 (例如: 創)
-    book = Column(String, nullable=False)      # 書卷全名 (例如: 創世記)
-    chapter = Column(Integer, nullable=False)
-    verse = Column(Integer, nullable=False)
-    text = Column(Text, nullable=False)
+class BibleText:
+    """聖經經文類別"""
+    @staticmethod
+    def get_verses_by_reference(book_abbr, chapter):
+        """根據書卷縮寫和章節獲取經文"""
+        texts_ref = db.collection(BIBLE_TEXT_COLLECTION)
+        query = texts_ref.where('book_abbr', '==', book_abbr).where('chapter', '==', chapter)
+        docs = query.stream()
+        
+        verses = []
+        for doc in docs:
+            data = doc.to_dict()
+            verses.append(data)
+        
+        # 按節數排序
+        verses.sort(key=lambda x: x.get('verse', 0))
+        return verses
 
 # --- 資料庫初始化與資料匯入 ---
 
 def init_db():
-    # 創建所有表格
-    print("Creating database tables...")
-    Base.metadata.create_all(bind=engine)
-    print("Database tables created.")
+    """初始化 Firestore 並匯入資料"""
+    print("Initializing Firestore database...")
     
-    db = SessionLocal()
+    # 檢查是否已匯入聖經經文資料
+    bible_text_ref = db.collection(BIBLE_TEXT_COLLECTION)
+    bible_text_count = len(list(bible_text_ref.limit(1).stream()))
     
-    # 檢查是否已匯入資料
-    bible_text_count = db.query(BibleText).count()
     print(f"Current BibleText count: {bible_text_count}")
     
     if bible_text_count == 0:
-        print("Importing Bible text data...")
+        print("Importing Bible text data to Firestore...")
         try:
-            # 讀取 CSV 檔案
             bible_df = pd.read_csv('data/bible_text.csv')
             print(f"Read {len(bible_df)} verses from CSV.")
-            # 將 DataFrame 寫入資料庫
-            bible_df.to_sql(BibleText.__tablename__, engine, if_exists='append', index=False)
-            print(f"Successfully imported {len(bible_df)} verses.")
+            
+            # 批次寫入 Firestore（每批 500 筆）
+            batch = db.batch()
+            batch_count = 0
+            
+            for index, row in bible_df.iterrows():
+                doc_ref = bible_text_ref.document()
+                batch.set(doc_ref, {
+                    'book_abbr': row['book_abbr'],
+                    'book': row['book'],
+                    'chapter': int(row['chapter']),
+                    'verse': int(row['verse']),
+                    'text': row['text']
+                })
+                batch_count += 1
+                
+                if batch_count >= 500:
+                    batch.commit()
+                    print(f"Committed {batch_count} verses to Firestore.")
+                    batch = db.batch()
+                    batch_count = 0
+            
+            if batch_count > 0:
+                batch.commit()
+                print(f"Committed final {batch_count} verses to Firestore.")
+            
+            print(f"Successfully imported {len(bible_df)} verses to Firestore.")
         except FileNotFoundError as e:
             print(f"Error: data/bible_text.csv not found - {e}")
         except Exception as e:
             print(f"Error importing Bible text: {e}")
     else:
-        print("Bible text data already exists, skipping import.")
-
-    bible_plan_count = db.query(BiblePlan).count()
-    print(f"Current BiblePlan count: {bible_plan_count}")
+        print("Bible text data already exists in Firestore, skipping import.")
     
-    if bible_plan_count == 0:
-        print("Importing Bible plans data...")
+    # 檢查是否已匯入讀經計畫資料
+    bible_plans_ref = db.collection(BIBLE_PLANS_COLLECTION)
+    bible_plans_count = len(list(bible_plans_ref.limit(1).stream()))
+    
+    print(f"Current BiblePlan count: {bible_plans_count}")
+    
+    if bible_plans_count == 0:
+        print("Importing Bible plans data to Firestore...")
         try:
-            # 讀取 CSV 檔案
             plans_df = pd.read_csv('data/bible_plans.csv')
             print(f"Read {len(plans_df)} plan entries from CSV.")
-            # 將 DataFrame 寫入資料庫
-            plans_df.to_sql(BiblePlan.__tablename__, engine, if_exists='append', index=False)
-            print(f"Successfully imported {len(plans_df)} plan entries.")
+            
+            # 批次寫入 Firestore
+            batch = db.batch()
+            batch_count = 0
+            
+            for index, row in plans_df.iterrows():
+                doc_ref = bible_plans_ref.document()
+                batch.set(doc_ref, {
+                    'plan_type': row['plan_type'],
+                    'day_number': int(row['day_number']),
+                    'readings': row['readings']
+                })
+                batch_count += 1
+                
+                if batch_count >= 500:
+                    batch.commit()
+                    print(f"Committed {batch_count} plan entries to Firestore.")
+                    batch = db.batch()
+                    batch_count = 0
+            
+            if batch_count > 0:
+                batch.commit()
+                print(f"Committed final {batch_count} plan entries to Firestore.")
+            
+            print(f"Successfully imported {len(plans_df)} plan entries to Firestore.")
         except FileNotFoundError as e:
             print(f"Error: data/bible_plans.csv not found - {e}")
         except Exception as e:
             print(f"Error importing Bible plans: {e}")
     else:
-        print("Bible plans data already exists, skipping import.")
-            
-    db.close()
-    print("Database initialization complete.")
+        print("Bible plans data already exists in Firestore, skipping import.")
+    
+    print("Firestore database initialization complete.")
 
-# 依賴項函數
+# 依賴項函數（保持與原有接口一致）
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """返回 Firestore 客戶端（用於保持接口一致性）"""
+    yield db
 
 if __name__ == "__main__":
     init_db()
+
