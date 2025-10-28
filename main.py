@@ -16,7 +16,7 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, PostbackEvent
 
-from database import init_db, get_db, User, BiblePlan, BibleText
+from database import init_db, User, BiblePlan, BibleText
 from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text, get_random_encouraging_verse
 from api_routes import router as api_router
 from admin_routes import router as admin_router
@@ -340,7 +340,6 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
 @handler.add(FollowEvent)
 def handle_follow(event):
     """（已修正） 處理使用者加入好友事件，使用按鈕選擇計畫"""
-    db = next(get_db())
     line_user_id = event.source.user_id
     
     # 取得使用者顯示名稱
@@ -393,7 +392,6 @@ def handle_message(event):
     """（已修正） 處理文字訊息事件 （邏輯與之前相同，但現在由按鈕觸發）"""
     text = event.message.text.strip()
     line_user_id = event.source.user_id
-    db = next(get_db())
     user = User.get_by_line_user_id(line_user_id)
     messaging_api: MessagingApi = next(get_messaging_api())
     
@@ -574,7 +572,7 @@ def read_root():
 # --- 排程任務 (用於每日推送) ---
 
 @app.post("/schedule/daily_push/{push_time}")
-def daily_push(push_time: str, db = Depends(get_db), messaging_api: MessagingApi = Depends(get_messaging_api)):
+def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messaging_api)):
     """
     定時推送讀經計畫或提醒給使用者。
     """
