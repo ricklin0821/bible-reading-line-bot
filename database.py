@@ -1,6 +1,6 @@
 import pandas as pd
 from google.cloud import firestore
-from datetime import date
+from datetime import date, datetime
 import os
 
 # 初始化 Firestore 客戶端
@@ -11,7 +11,28 @@ USERS_COLLECTION = "users"
 BIBLE_PLANS_COLLECTION = "bible_plans"
 BIBLE_TEXT_COLLECTION = "bible_text"
 
-# --- 輔助函數：將 Firestore 文檔轉換為字典 ---
+# --- 輔助函數 ---
+
+def date_to_firestore(d):
+    """將 Python date 轉換為 Firestore Timestamp"""
+    if d is None:
+        return None
+    if isinstance(d, datetime):
+        return d
+    if isinstance(d, date):
+        # 將 date 轉換為 datetime（設定時間為 00:00:00）
+        return datetime.combine(d, datetime.min.time())
+    return d
+
+def firestore_to_date(timestamp):
+    """將 Firestore Timestamp 轉換為 Python date"""
+    if timestamp is None:
+        return None
+    if isinstance(timestamp, date):
+        return timestamp
+    if hasattr(timestamp, 'date'):
+        return timestamp.date()
+    return timestamp
 
 def user_doc_to_dict(doc):
     """將 Firestore 使用者文檔轉換為字典"""
@@ -20,10 +41,8 @@ def user_doc_to_dict(doc):
     data = doc.to_dict()
     data['id'] = doc.id
     # 將 Firestore 的 Timestamp 轉換為 Python date
-    if 'start_date' in data and data['start_date']:
-        data['start_date'] = data['start_date'].date() if hasattr(data['start_date'], 'date') else data['start_date']
-    if 'last_read_date' in data and data['last_read_date']:
-        data['last_read_date'] = data['last_read_date'].date() if hasattr(data['last_read_date'], 'date') else data['last_read_date']
+    data['start_date'] = firestore_to_date(data.get('start_date'))
+    data['last_read_date'] = firestore_to_date(data.get('last_read_date'))
     return data
 
 # --- 使用者操作 ---
@@ -69,9 +88,9 @@ class User:
         user_data = {
             'line_user_id': self.line_user_id,
             'plan_type': self.plan_type,
-            'start_date': self.start_date,
+            'start_date': date_to_firestore(self.start_date),
             'current_day': self.current_day,
-            'last_read_date': self.last_read_date,
+            'last_read_date': date_to_firestore(self.last_read_date),
             'quiz_state': self.quiz_state,
             'quiz_data': self.quiz_data
         }
