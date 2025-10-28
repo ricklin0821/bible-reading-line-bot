@@ -19,6 +19,7 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, P
 from database import init_db, get_db, User, BiblePlan, BibleText
 from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text, get_random_encouraging_verse
 from api_routes import router as api_router
+from admin_routes import router as admin_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -34,6 +35,7 @@ app = FastAPI()
 
 # 包含 API 路由
 app.include_router(api_router)
+app.include_router(admin_router)
 
 # 靜態檔案服務
 try:
@@ -543,10 +545,9 @@ async def handle_webhook(request: Request):
 
 @app.get("/")
 def read_root():
-    """根路由，提供網頁預覽介面"""
-    if os.path.exists("index.html"):
-        return FileResponse("index.html", media_type="text/html")
-    return {"Hello": "Bible Reading Bot is running!"}
+    """根路由，重定向到管理後台"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/static/admin/index.html")
 
 # --- 排程任務 (用於每日推送) ---
 
