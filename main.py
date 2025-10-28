@@ -40,7 +40,14 @@ try:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 except Exception as e:
     print(f"Warning: Could not mount static directory: {e}")
-init_db()
+
+# 在應用啟動時執行一次資料庫初始化
+@app.on_event("startup")
+async def startup_event():
+    print("Application startup: Checking Firestore database...")
+    # 注意：首次啟動時如果需要匯入資料，可能會超時
+    # 建議先使用 import_data_to_firestore.py 手動匯入資料
+    init_db()
 
 # --- 聖經書卷對照表 ---
 BIBLE_BOOK_MAP = {
