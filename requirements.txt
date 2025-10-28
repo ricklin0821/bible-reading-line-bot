@@ -4,4 +4,5 @@ python-multipart
 line-bot-sdk>=3.0.0
 pandas
 google-cloud-firestore
+packaging
 
