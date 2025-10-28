@@ -390,12 +390,21 @@ def handle_follow(event):
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    """(已修正) 處理文字訊息事件 (邏輯與之前相同，但現在由按鈕觸發)"""
+    """（已修正） 處理文字訊息事件 （邏輯與之前相同，但現在由按鈕觸發）"""
     text = event.message.text.strip()
     line_user_id = event.source.user_id
     db = next(get_db())
     user = User.get_by_line_user_id(line_user_id)
     messaging_api: MessagingApi = next(get_messaging_api())
+    
+    # 取得使用者顯示名稱（如果還沒有）
+    if user and not user.display_name:
+        try:
+            profile = messaging_api.get_profile(line_user_id)
+            user.display_name = profile.display_name
+            user.save()
+        except:
+            pass
     
     if not user:
         handle_follow(event)
