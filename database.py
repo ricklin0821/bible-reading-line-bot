@@ -119,6 +119,48 @@ class BibleText:
         # 按節數排序
         verses.sort(key=lambda x: x.get('verse', 0))
         return verses
+    
+    @staticmethod
+    def get_verse(book_abbr, chapter, verse):
+        """根據書卷、章節、節數獲取單節經文"""
+        texts_ref = db.collection(BIBLE_TEXT_COLLECTION)
+        query = texts_ref.where('book_abbr', '==', book_abbr).where('chapter', '==', chapter).where('verse', '==', verse).limit(1)
+        docs = query.stream()
+        
+        for doc in docs:
+            return doc.to_dict()
+        return None
+    
+    @staticmethod
+    def get_verses_in_range(book_abbr, start_chapter, end_chapter, start_verse=None, end_verse=None):
+        """獲取範圍內的經文"""
+        texts_ref = db.collection(BIBLE_TEXT_COLLECTION)
+        query = texts_ref.where('book_abbr', '==', book_abbr)
+        
+        # 獲取所有符合条件的經文
+        docs = query.stream()
+        verses = []
+        
+        for doc in docs:
+            data = doc.to_dict()
+            chapter = data.get('chapter')
+            verse = data.get('verse')
+            
+            # 範圍篩選
+            if chapter < start_chapter or chapter > end_chapter:
+                continue
+            
+            if start_verse and chapter == start_chapter and verse < start_verse:
+                continue
+            
+            if end_verse and chapter == end_chapter and verse > end_verse:
+                continue
+            
+            verses.append(data)
+        
+        # 按章節和節數排序
+        verses.sort(key=lambda x: (x.get('chapter', 0), x.get('verse', 0)))
+        return verses
 
 # --- 資料庫初始化與資料匯入 ---
 

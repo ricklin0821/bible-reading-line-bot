@@ -442,7 +442,7 @@ def handle_message(event):
             
         # 開始生成測驗
         try:
-            quiz_data, first_question_message = generate_quiz_for_user(db, user)
+            quiz_data, first_question_message = generate_quiz_for_user(user)
             
             user.quiz_state = "WAITING_ANSWER"
             user.quiz_data = json.dumps(quiz_data)
@@ -466,7 +466,7 @@ def handle_message(event):
 
     # --- 處理測驗答案 ---
     if user.quiz_state == "WAITING_ANSWER":
-        reply_messages = process_quiz_answer(db, user, text)
+        reply_messages = process_quiz_answer(user, text)
         
         # 檢查是否完成測驗
         if user.quiz_state == "QUIZ_COMPLETED":
@@ -581,7 +581,7 @@ def daily_push(push_time: str, db = Depends(get_db), messaging_api: MessagingApi
                 readings = get_current_reading_plan(db, user)
                 
                 if push_time == 'night':
-                    encouraging_verse_data = get_random_encouraging_verse(db)
+                    encouraging_verse_data = get_random_encouraging_verse()
                     encouraging_text = encouraging_verse_data['text']
                     encouraging_ref = encouraging_verse_data['reference']
                     

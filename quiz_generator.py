@@ -2,7 +2,6 @@ import re
 import random
 import json
 from typing import Tuple, List, Dict, Any
-from sqlalchemy.orm import Session
 from linebot.v3.messaging import TextMessage
 
 from database import User, BiblePlan, BibleText
@@ -19,7 +18,7 @@ ENCOURAGING_REFERENCES = [
     ("來", 10, 24, 25), ("雅", 1, 2, 4), ("彼前", 5, 7, 7)
 ]
 
-def get_random_encouraging_verse(db: Session) -> dict:
+def get_random_encouraging_verse() -> dict:
     """從預設的鼓勵經文範圍中隨機抽取一節經文"""
     
     # 隨機選擇一個經文範圍
@@ -28,28 +27,24 @@ def get_random_encouraging_verse(db: Session) -> dict:
     # 在選定的範圍內隨機選擇一節
     verse_num = random.randint(start_v, end_v)
     
-    # 從資料庫中查詢該節經文
-    verse = db.query(BibleText).filter(
-        BibleText.book_abbr == book_abbr,
-        BibleText.chapter == chap,
-        BibleText.verse == verse_num
-    ).first()
+    # 從 Firestore 中查詢該節經文
+    verse = BibleText.get_verse(book_abbr, chap, verse_num)
     
     if verse:
         return {
-            "text": verse.text,
-            "reference": f"{verse.book_abbr}{verse.chapter}:{verse.verse}"
+            "text": verse['text'],
+            "reference": f"{verse['book_abbr']}{verse['chapter']}:{verse['verse']}"
         }
     
     # 如果找不到，則返回一個預設的鼓勵語
     return {
-        "text": "你當剛強壯膽，不要懼怕，也不要驚惶，因為你無論往哪裡去，耶和華你的神必與你同在。",
+        "text": "你當剛強壯膽，不要懼怕，也不要驚惶,因為你無論往哪裡去，耶和華你的神必與你同在。",
         "reference": "約書亞記 1:9"
     }
 
 # --- 輔助函數 ---
 
-def get_verses_for_reading(db: Session, reading_ref: str) -> List[Dict[str, Any]]:
+def get_verses_for_reading(reading_ref: str) -> List[Dict[str, Any]]:
     """
     根據經文範圍字串 (例如: '創1:1-3:24;太1:1-2:23') 獲取所有經文。
     返回一個包含 {book_abbr, chapter, verse, text} 的列表。
@@ -72,52 +67,26 @@ def get_verses_for_reading(db: Session, reading_ref: str) -> List[Dict[str, Any]
             match_chap = re.match(r'([^\d]+)(\d+)', ref)
             if match_chap:
                 book_abbr, chap = match_chap.groups()
-                verses = db.query(BibleText).filter(
-                    BibleText.book_abbr == book_abbr,
-                    BibleText.chapter == int(chap)
-                ).all()
-                all_verses.extend([v.__dict__ for v in verses])
+                verses = BibleText.get_verses_by_reference(book_abbr, int(chap))
+                all_verses.extend(verses)
             continue
             
         book_abbr, start_chap_str, start_verse_str, end_chap_str, end_verse_str = match.groups()
         
         start_chap = int(start_chap_str)
         end_chap = int(end_chap_str) if end_chap_str else start_chap
-        start_verse = int(start_verse_str) if start_verse_str else 1
+        start_verse = int(start_verse_str) if start_verse_str else None
+        end_verse = int(end_verse_str) if end_verse_str else None
         
-        # 複雜的經文範圍查詢
-        query = db.query(BibleText).filter(BibleText.book_abbr == book_abbr)
-        
-        if start_chap == end_chap:
-            # 單章範圍
-            query = query.filter(BibleText.chapter == start_chap)
-            
-            if start_verse_str:
-                # 節範圍
-                end_verse = int(end_verse_str) if end_verse_str else 999 # 假設一個很大的數
-                query = query.filter(BibleText.verse.between(start_verse, end_verse))
+        # 使用 Firestore 查詢獲取經文範圍
+        if start_chap == end_chap and not start_verse:
+            # 單章，無節範圍
+            verses = BibleText.get_verses_by_reference(book_abbr, start_chap)
         else:
-            # 跨章範圍
-            query = query.filter(BibleText.chapter.between(start_chap, end_chap))
-            
-            # 處理起始節和結束節
-            if start_verse_str:
-                # 排除起始章中在起始節之前的節
-                query = query.filter(
-                    (BibleText.chapter > start_chap) | 
-                    ((BibleText.chapter == start_chap) & (BibleText.verse >= start_verse))
-                )
-            
-            if end_verse_str:
-                end_verse = int(end_verse_str)
-                # 排除結束章中在結束節之後的節
-                query = query.filter(
-                    (BibleText.chapter < end_chap) |
-                    ((BibleText.chapter == end_chap) & (BibleText.verse <= end_verse))
-                )
+            # 複雜範圍查詢
+            verses = BibleText.get_verses_in_range(book_abbr, start_chap, end_chap, start_verse, end_verse)
         
-        verses = query.order_by(BibleText.chapter, BibleText.verse).all()
-        all_verses.extend([v.__dict__ for v in verses])
+        all_verses.extend(verses)
         
     return all_verses
 
@@ -157,25 +126,20 @@ def create_fill_in_the_blank_quiz(verse_data: Dict[str, Any]) -> Tuple[str, str]
 
 # --- 核心邏輯 ---
 
-def generate_quiz_for_user(db: Session, user: User) -> Tuple[Dict[str, Any], TextMessage]:
+def generate_quiz_for_user(user: User) -> Tuple[Dict[str, Any], TextMessage]:
     """
     為使用者生成當天的 3 題填充題測驗。
     返回 quiz_data 字典和第一道題目的 TextMessage。
     """
     
     # 1. 獲取當天的讀經範圍
-    plan = db.query(BiblePlan).filter(
-        BiblePlan.plan_type == user.plan_type,
-        BiblePlan.day_number == user.current_day
-    ).first()
+    readings = BiblePlan.get_by_plan_and_day(user.plan_type, user.current_day)
     
-    if not plan:
+    if not readings:
         raise ValueError("No reading plan found for today.")
-        
-    readings = plan.readings
     
     # 2. 獲取範圍內的所有經文
-    all_verses = get_verses_for_reading(db, readings)
+    all_verses = get_verses_for_reading(readings)
     
     if not all_verses:
         raise ValueError("No verses found for today's reading plan.")
@@ -232,7 +196,7 @@ def generate_quiz_for_user(db: Session, user: User) -> Tuple[Dict[str, Any], Tex
     
     return quiz_data, first_question_message
 
-def process_quiz_answer(db: Session, user: User, answer: str) -> List[TextMessage]:
+def process_quiz_answer(user: User, answer: str) -> List[TextMessage]:
     """
     處理使用者提交的測驗答案。
     返回一個包含回覆訊息的列表。
@@ -328,11 +292,11 @@ def process_quiz_answer(db: Session, user: User, answer: str) -> List[TextMessag
         
     return reply_messages
     
-def get_daily_reading_text(db: Session, readings: str) -> str:
+def get_daily_reading_text(readings: str) -> str:
     """
     根據經文範圍字串獲取經文內容，用於每日推送。
     """
-    all_verses = get_verses_for_reading(db, readings)
+    all_verses = get_verses_for_reading(readings)
     
     if not all_verses:
         return "今日經文範圍無法取得。"
