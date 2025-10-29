@@ -375,6 +375,9 @@ def handle_follow(event):
                 ),
                 QuickReplyItem(
                     action=MessageAction(label="2. 平衡讀經計畫", text="2")
+                ),
+                QuickReplyItem(
+                    action=MessageAction(label="聯繫作者", text="聯繫作者")
                 )
             ]
         )
@@ -410,6 +413,67 @@ def handle_message(event):
         handle_follow(event)
         return
 
+    # --- 處理「聯繫作者」功能 ---
+    if text == "聯繫作者":
+        # 記錄使用者狀態為等待輸入 EMAIL
+        User.update(line_user_id, contact_state="WAITING_EMAIL")
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="請輸入您的 Email 信箱：")]
+            )
+        )
+        return
+    
+    # 處理 EMAIL 輸入
+    if user.get('contact_state') == "WAITING_EMAIL":
+        # 簡單驗證 email 格式
+        if '@' not in text or '.' not in text:
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text="Email 格式不正確，請重新輸入：")]
+                )
+            )
+            return
+        
+        User.update(line_user_id, contact_email=text, contact_state="WAITING_MESSAGE")
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="請輸入您想說的話：")]
+            )
+        )
+        return
+    
+    # 處理訊息內容
+    if user.get('contact_state') == "WAITING_MESSAGE":
+        contact_email = user.get('contact_email', '未提供')
+        contact_message = text
+        
+        # 清除狀態
+        User.update(line_user_id, contact_state="IDLE", contact_email="")
+        
+        # 發送通知給作者
+        author_line_id = "U67da4c26e3706928c2eb77c1fc89b3a9"
+        display_name = user.get('display_name', '未知')
+        notification_text = f"【使用者聯繫】\n\n姓名：{display_name}\nEmail：{contact_email}\n\n內容：\n{contact_message}"
+        
+        try:
+            send_message(author_line_id, [TextMessage(text=notification_text)], messaging_api)
+        except Exception as e:
+            print(f"Error sending contact notification: {e}")
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="感謝您的聯繫！我們已收到您的訊息，會盡快回覆您。")]
+            )
+        )
+        return
+    
     # --- 處理「計畫選擇」的文字回覆 ("1" 或 "2") ---
     if not user.plan_type:
         selected_plan = None

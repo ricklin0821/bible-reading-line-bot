@@ -322,6 +322,54 @@
             }
         }
 
+        .footer {
+            background: #2d3436;
+            color: white;
+            padding: 30px 20px;
+            margin-top: 60px;
+        }
+
+        .footer-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .copyright {
+            font-size: 1em;
+            margin: 0;
+        }
+
+        .contact-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: 2px solid #e74c3c;
+            border-radius: 5px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .contact-link:hover {
+            background: #e74c3c;
+            transform: translateY(-2px);
+        }
+
+        .facebook-icon {
+            color: #e74c3c;
+        }
+
+        .contact-link:hover .facebook-icon {
+            color: white;
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2em;
@@ -360,6 +408,15 @@
 
             .feature-icon {
                 font-size: 2.5em;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .copyright {
+                font-size: 0.9em;
             }
         }
     </style>
@@ -530,6 +587,19 @@
             </a>
         </div>
     </div>
+
+    <!-- 版權宣告區塊 -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p class="copyright">© 掘系林老師 設計</p>
+            <a href="https://www.facebook.com/profile.php?id=61572093864360&locale=zh_TW" target="_blank" class="contact-link">
+                <svg class="facebook-icon" viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                聯絡我 Contact
+            </a>
+        </div>
+    </footer>
 
     <script>
         function showPlanDetails(planType) {
