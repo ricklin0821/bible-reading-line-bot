@@ -39,6 +39,14 @@ class UserObject:
     def get(self, key, default=None):
         return self._data.get(key, default)
     
+    def __getitem__(self, key):
+        """支援 user['field'] 語法"""
+        return self._data[key]
+    
+    def __setitem__(self, key, value):
+        """支援 user['field'] = value 語法"""
+        self._data[key] = value
+    
     def save(self):
         """儲存變更到 Firestore"""
         if not self._id:
