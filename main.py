@@ -200,7 +200,7 @@ def send_message(line_user_id: str, messages: list[TextMessage | FlexMessage], m
 
 def get_all_users_with_plan():
     """獲取所有已選擇讀經計畫的使用者"""
-    from database import db, USERS_COLLECTION
+    from database import db, USERS_COLLECTION, UserObject
     users_ref = db.collection(USERS_COLLECTION)
     query = users_ref.where('plan_type', '!=', None)
     docs = query.stream()
@@ -208,23 +208,15 @@ def get_all_users_with_plan():
     users = []
     for doc in docs:
         data = doc.to_dict()
-        user = User(
-            line_user_id=data['line_user_id'],
-            plan_type=data.get('plan_type'),
-            start_date=data.get('start_date'),
-            current_day=data.get('current_day', 1),
-            last_read_date=data.get('last_read_date'),
-            quiz_state=data.get('quiz_state', 'IDLE'),
-            quiz_data=data.get('quiz_data', '{}')
-        )
-        user._doc_id = doc.id
+        data['_id'] = doc.id
+        user = UserObject(data)
         users.append(user)
     
     return users
 
 def get_current_reading_plan(db, user: User) -> str:
     """獲取使用者當天的讀經計畫內容 (原始字串)"""
-    plan = BiblePlan.get_by_plan_and_day(user.plan_type, user.current_day)
+    plan = BiblePlan.get_by_day(user.plan_type, user.current_day)
     
     if plan:
         return plan
