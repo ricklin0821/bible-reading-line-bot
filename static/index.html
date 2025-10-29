@@ -261,6 +261,45 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
 
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .feature-card h3 {
+            color: #667eea;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+
+        .feature-card p {
+            color: #555;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
         @keyframes fadeInDown {
             from {
                 opacity: 0;
@@ -309,6 +348,18 @@
                 right: 10px;
                 padding: 10px 20px;
                 font-size: 0.9em;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-card {
+                padding: 25px 20px;
+            }
+
+            .feature-icon {
+                font-size: 2.5em;
             }
         }
     </style>
@@ -412,10 +463,63 @@
             </div>
         </div>
 
+        <!-- 功能介紹區塊 -->
+        <div class="content-card">
+            <div class="intro-section">
+                <h2>🤖 智能讀經助手功能</h2>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">📅</div>
+                        <h3>個人化讀經計畫</h3>
+                        <p>根據您的進度自動調整，兩種計畫任您選擇，靈活安排讀經節奏。</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">🔔</div>
+                        <h3>每日智能提醒</h3>
+                        <p>早、中、晚三個時段自動推送讀經提醒，讓您不再錯過靈修時光。</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📖</div>
+                        <h3>經文即時查看</h3>
+                        <p>一鍵查看今日讀經範圍，附上 YouVersion 連結，隨時隨地輕鬆閱讀。</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">✅</div>
+                        <h3>互動式測驗</h3>
+                        <p>完成讀經後，透過填空測驗加深記憶，讓神的話語真正進入心中。</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h3>進度追蹤記錄</h3>
+                        <p>清楚記錄您的讀經天數和進度，見證自己的屬靈成長歷程。</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">💬</div>
+                        <h3>LINE 即時互動</h3>
+                        <p>透過 LINE 對話，隨時查詢進度、補讀落後章節，就像有位貼心的讀經夥伴。</p>
+                    </div>
+                </div>
+
+                <div class="highlight" style="margin-top: 40px;">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>🎯 為什麼選擇我們的讀經機器人？</strong></p>
+                    <p>✨ <strong>完全免費</strong> - 無需付費，所有功能完全開放使用</p>
+                    <p>⚡ <strong>操作簡單</strong> - 只需加入 LINE，無需下載 App 或註冊帳號</p>
+                    <p>🎓 <strong>科學設計</strong> - 結合記憶曲線和測驗機制，提升學習效果</p>
+                    <p>🤝 <strong>陪伴成長</strong> - 不只是工具，更是您讀經路上的忠實夥伴</p>
+                </div>
+            </div>
+        </div>
+
         <!-- LINE 官方帳號區塊 -->
         <div class="content-card line-section">
             <h2>📱 加入 LINE 官方帳號</h2>
-            <p>立即加入我們的 LINE 官方帳號，開始您的讀經之旅！<br>每天自動推送讀經進度，還有互動測驗幫助您更深入理解神的話語。</p>
+            <p>準備好開始了嗎？立即加入我們的 LINE 官方帳號！<br>讓智能讀經助手陪伴您完成一年讀經的目標。</p>
             
             <img src="/static/line-qrcode.jpg" alt="LINE 官方帳號 QR Code" class="line-qrcode">
             
