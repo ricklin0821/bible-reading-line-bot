@@ -319,15 +319,23 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
             contents=[
                 FlexButton(
                     action=MessageAction(
-                        label="✅ 回報已完成讀經", # <--- (修正文字)
-                        text="回報已完成讀經" # <--- (修正文字)
+                        label="✅ 回報已完成讀經",
+                        text="回報已完成讀經"
                     ),
-                    style="primary", # 顯眼的樣式
-                    color="#0066cc", # 藍色按鈕
-                    height="md" # 中等高度
+                    style="primary",
+                    color="#0066cc",
+                    height="md"
+                ),
+                FlexButton(
+                    action=URIAction(
+                        label="📤 分享經文",
+                        uri=f"https://line.me/R/share?text=【今日讀經】{readings.replace(' ', '%20')}"
+                    ),
+                    style="link",
+                    height="sm"
                 )
             ],
-            paddingAll="md" # 增加底部邊距
+            paddingAll="md"
         )
     )
 
