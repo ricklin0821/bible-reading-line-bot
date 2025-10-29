@@ -18,11 +18,44 @@ BIBLE_TEXT_COLLECTION = "bible_text"
 
 # --- User 類別 (Firestore 版本) ---
 
+class UserObject:
+    """使用者物件包裝類別 - 支援物件屬性訪問和 save() 方法"""
+    
+    def __init__(self, data: Dict[str, Any]):
+        self._data = data
+        self._id = data.get('_id')
+    
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            return object.__getattribute__(self, name)
+        return self._data.get(name)
+    
+    def __setattr__(self, name, value):
+        if name.startswith('_'):
+            object.__setattr__(self, name, value)
+        else:
+            self._data[name] = value
+    
+    def get(self, key, default=None):
+        return self._data.get(key, default)
+    
+    def save(self):
+        """儲存變更到 Firestore"""
+        if not self._id:
+            raise ValueError("Cannot save user without _id")
+        
+        users_ref = db.collection(USERS_COLLECTION)
+        doc_ref = users_ref.document(self._id)
+        
+        # 不儲存 _id 和 _data
+        save_data = {k: v for k, v in self._data.items() if not k.startswith('_')}
+        doc_ref.update(save_data)
+
 class User:
     """使用者類別 - Firestore 版本"""
     
     @staticmethod
-    def get_by_line_id(line_user_id: str) -> Optional[Dict[str, Any]]:
+    def get_by_line_id(line_user_id: str) -> Optional[UserObject]:
         """根據 LINE User ID 查詢使用者"""
         users_ref = db.collection(USERS_COLLECTION)
         query = users_ref.where(filter=firestore.FieldFilter('line_user_id', '==', line_user_id)).limit(1)
@@ -30,12 +63,17 @@ class User:
         
         if docs:
             user_data = docs[0].to_dict()
-            user_data['_id'] = docs[0].id  # 保存文檔 ID
-            return user_data
+            user_data['_id'] = docs[0].id
+            return UserObject(user_data)
         return None
     
     @staticmethod
-    def create(line_user_id: str, plan_type: str = None) -> Dict[str, Any]:
+    def get_by_line_user_id(line_user_id: str) -> Optional[UserObject]:
+        """別名方法，與 get_by_line_id 相同"""
+        return User.get_by_line_id(line_user_id)
+    
+    @staticmethod
+    def create(line_user_id: str, plan_type: str = None) -> UserObject:
         """建立新使用者"""
         users_ref = db.collection(USERS_COLLECTION)
         
@@ -46,14 +84,17 @@ class User:
             'current_day': 1,
             'last_read_date': None,
             'quiz_state': 'IDLE',
-            'quiz_data': '{}'
+            'quiz_data': '{}',
+            'display_name': None,
+            'contact_state': 'IDLE',
+            'contact_email': ''
         }
         
         doc_ref = users_ref.document()
         doc_ref.set(user_data)
         
         user_data['_id'] = doc_ref.id
-        return user_data
+        return UserObject(user_data)
     
     @staticmethod
     def update(line_user_id: str, **kwargs) -> bool:
@@ -63,7 +104,7 @@ class User:
             return False
         
         users_ref = db.collection(USERS_COLLECTION)
-        doc_ref = users_ref.document(user['_id'])
+        doc_ref = users_ref.document(user._id)
         
         # 處理 date 物件轉換
         update_data = {}
@@ -77,7 +118,7 @@ class User:
         return True
     
     @staticmethod
-    def get_all() -> List[Dict[str, Any]]:
+    def get_all() -> List[UserObject]:
         """取得所有使用者"""
         users_ref = db.collection(USERS_COLLECTION)
         docs = users_ref.stream()
@@ -86,7 +127,7 @@ class User:
         for doc in docs:
             user_data = doc.to_dict()
             user_data['_id'] = doc.id
-            users.append(user_data)
+            users.append(UserObject(user_data))
         
         return users
 

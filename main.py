@@ -355,8 +355,10 @@ def handle_follow(event):
     user = User.get_by_line_user_id(line_user_id)
     
     if not user:
-        new_user = User(line_user_id=line_user_id, plan_type=None, display_name=display_name)
-        new_user.save()
+        new_user = User.create(line_user_id=line_user_id, plan_type=None)
+        if display_name:
+            new_user.display_name = display_name
+            new_user.save()
     elif not user.display_name and display_name:
         # 更新現有使用者的顯示名稱
         user.display_name = display_name
