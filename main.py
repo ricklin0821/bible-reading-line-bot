@@ -564,7 +564,7 @@ def handle_message(event):
 
     # --- 處理測驗答案 ---
     if user.quiz_state == "WAITING_ANSWER":
-        reply_messages = process_quiz_answer(user, text)
+        reply_messages, user = process_quiz_answer(user, text)
         
         # 檢查是否完成測驗
         if user.quiz_state == "QUIZ_COMPLETED":
