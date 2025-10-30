@@ -397,6 +397,10 @@ def handle_follow(event):
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     """（已修正） 處理文字訊息事件 （邏輯與之前相同，但現在由按鈕觸發）"""
+    # 檢查是否為文字訊息，如果不是則忽略
+    if not isinstance(event.message, TextMessageContent):
+        return
+        
     text = event.message.text.strip()
     line_user_id = event.source.user_id
     user = User.get_by_line_user_id(line_user_id)
