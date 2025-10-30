@@ -51,16 +51,22 @@ def get_verses_for_reading(reading_ref: str) -> List[Dict[str, Any]]:
     """
     all_verses = []
     
+    print(f"[DEBUG] get_verses_for_reading called with: {reading_ref}")
+    
     # 處理多個閱讀範圍
     refs = reading_ref.split(';')
+    print(f"[DEBUG] Split refs: {refs}")
     
     for ref in refs:
         ref = ref.strip()
         if not ref:
             continue
+        
+        print(f"[DEBUG] Processing ref: {ref}")
             
         # 匹配書卷縮寫和章節範圍 (例如: 創1-3, 太1:1-2:23)
         match = re.match(r'([^\d]+)(\d+)(?::(\d+))?(?:-(\d+)(?::(\d+))?)?', ref)
+        print(f"[DEBUG] Match result: {match.groups() if match else None}")
         
         if not match:
             # 處理只有章節的情況 (例如: 創1)
@@ -81,11 +87,14 @@ def get_verses_for_reading(reading_ref: str) -> List[Dict[str, Any]]:
         # 使用 Firestore 查詢獲取經文範圍
         if start_chap == end_chap and not start_verse:
             # 單章，無節範圍
+            print(f"[DEBUG] Fetching single chapter: {book_abbr} {start_chap}")
             verses = BibleText.get_verses_by_reference(book_abbr, start_chap)
         else:
             # 複雜範圍查詢
+            print(f"[DEBUG] Fetching range: {book_abbr} {start_chap}-{end_chap}, verses {start_verse}-{end_verse}")
             verses = BibleText.get_verses_in_range(book_abbr, start_chap, end_chap, start_verse, end_verse)
         
+        print(f"[DEBUG] Verses fetched for {ref}: {len(verses)}")
         all_verses.extend(verses)
         
     return all_verses
@@ -133,18 +142,23 @@ def generate_quiz_for_user(user: User) -> Tuple[Dict[str, Any], TextMessage]:
     """
     
     # 1. 獲取當天的讀經範圍
+    print(f"[DEBUG] Generating quiz for user: plan_type={user['plan_type']}, current_day={user['current_day']}")
     plan = BiblePlan.get_by_day(user['plan_type'], user['current_day'])
+    print(f"[DEBUG] Plan retrieved: {plan}")
     
     if not plan:
         raise ValueError("No reading plan found for today.")
     
     readings = plan['readings']
+    print(f"[DEBUG] Readings: {readings}")
     
     if not readings:
         raise ValueError("No reading plan found for today.")
     
     # 2. 獲取範圍內的所有經文
+    print(f"[DEBUG] Fetching verses for readings: {readings}")
     all_verses = get_verses_for_reading(readings)
+    print(f"[DEBUG] Total verses fetched: {len(all_verses)}")
     
     if not all_verses:
         raise ValueError("No verses found for today's reading plan.")
