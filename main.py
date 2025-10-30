@@ -3,6 +3,7 @@ import json
 import re
 from datetime import date, datetime, timedelta
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from linebot.v3 import WebhookHandler
@@ -324,7 +325,7 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
                 FlexButton(
                     action=URIAction(
                         label="📤 分享經文",
-                        uri=f"https://line.me/R/share?text=【今日讀經】{readings.replace(' ', '%20')}"
+                        uri=f"https://line.me/R/share?text={quote('【今日讀經】' + readings)}"
                     ),
                     style="link",
                     height="sm"
