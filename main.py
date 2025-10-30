@@ -503,15 +503,36 @@ def handle_message(event):
             
             reply_text = f"太棒了！您已選擇「{plan_name}」。\n\n我們將從今天 (第 1 天) 開始！"
             
-            # 最終診斷：將回覆訊息簡化到極致
-            messages_to_send = [TextMessage(text="計畫選擇成功。")]
-            
-            messaging_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=messages_to_send
+            # 恢復 Flex Message 邏輯，並加入詳細錯誤捕捉
+            readings = get_current_reading_plan(user)
+
+            try:
+                plan_message = get_reading_plan_message(user, readings) 
+                messages_to_send = [TextMessage(text=reply_text), plan_message]
+                
+                messaging_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=messages_to_send
+                    )
                 )
-            )
+            except Exception as e:
+                # 捕捉 LINE API 錯誤，並將錯誤訊息發送給使用者
+                error_message = f"抱歉，發送讀經計畫時發生錯誤：{e}"
+                print(f"LINE API Error during plan selection: {error_message}")
+                
+                # 嘗試發送一個簡單的錯誤回覆
+                try:
+                    messaging_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text=error_message)]
+                        )
+                    )
+                except:
+                    # 如果連錯誤回覆都失敗，則不採取任何行動
+                    pass
+            
         else:
             handle_follow(event)
         
