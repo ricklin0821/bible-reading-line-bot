@@ -502,12 +502,18 @@ def handle_message(event):
             reply_text = f"太棒了！您已選擇「{plan_name}」。\n\n我們將從今天 (第 1 天) 開始！"
             
             readings = get_current_reading_plan(user)
-            plan_message = get_reading_plan_message(user, readings) 
+            
+            try:
+                plan_message = get_reading_plan_message(user, readings) 
+                messages_to_send = [TextMessage(text=reply_text), plan_message]
+            except Exception as e:
+                print(f"Error generating plan message: {e}")
+                messages_to_send = [TextMessage(text=f"{reply_text}\n\n抱歉，生成讀經計畫訊息時發生錯誤：{e}")]
             
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text=reply_text), plan_message] 
+                    messages=messages_to_send
                 )
             )
         else:
