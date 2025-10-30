@@ -241,7 +241,9 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
         if i > 0:
             body_contents.append(FlexSeparator(margin="md"))
             
-        if reading["url"] and reading["url"].strip():
+        # 確保 URL 不為空且以 http 或 https 開頭
+        url_valid = reading["url"] and reading["url"].strip() and (reading["url"].startswith("http://") or reading["url"].startswith("https://"))
+        if url_valid:
             body_contents.append(FlexBox(
                 layout="horizontal",
                 margin="md",
