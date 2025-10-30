@@ -241,7 +241,7 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
         if i > 0:
             body_contents.append(FlexSeparator(margin="md"))
             
-        if reading["url"]:
+        if reading["url"] and reading["url"].strip():
             body_contents.append(FlexBox(
                 layout="horizontal",
                 margin="md",
