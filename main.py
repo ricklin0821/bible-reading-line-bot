@@ -581,12 +581,25 @@ def handle_message(event):
                     messages=[TextMessage(text="太棒了！讓我們來進行今天的經文小測驗。"), first_question_message]
                 )
             )
-        except Exception as e:
-            print(f"Error generating quiz: {e}")
+        except ValueError as e:
+            # 資料庫查詢錯誤
+            print(f"ValueError generating quiz: {e}")
+            import traceback
+            traceback.print_exc()
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text="抱歉，生成測驗時發生錯誤。請稍後再試。")]
+                    messages=[TextMessage(text=f"抱歉，無法生成測驗。\n\n錯誤訊息：{str(e)}\n\n請聯繫管理員檢查資料庫設定。")]
+                )
+            )
+        except Exception as e:
+            print(f"Error generating quiz: {e}")
+            import traceback
+            traceback.print_exc()
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=f"抱歉，生成測驗時發生錯誤。\n\n錯誤訊息：{str(e)}")]
                 )
             )
         return
