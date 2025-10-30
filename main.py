@@ -505,12 +505,15 @@ def handle_message(event):
             
             readings = get_current_reading_plan(user)
             
-            try:
-                plan_message = get_reading_plan_message(user, readings) 
-                messages_to_send = [TextMessage(text=reply_text), plan_message]
-            except Exception as e:
-                print(f"Error generating plan message: {e}")
-                messages_to_send = [TextMessage(text=f"{reply_text}\n\n抱歉，生成讀經計畫訊息時發生錯誤：{e}")]
+            # 臨時修正：只發送文字訊息，以確認 Flex Message 是否為錯誤來源
+            messages_to_send = [TextMessage(text=f"{reply_text}\n\n讀經範圍：{readings}\n\n(Flex Message 暫時禁用，請重新部署並測試)") ]
+            
+            # try:
+            #     plan_message = get_reading_plan_message(user, readings) 
+            #     messages_to_send = [TextMessage(text=reply_text), plan_message]
+            # except Exception as e:
+            #     print(f"Error generating plan message: {e}")
+            #     messages_to_send = [TextMessage(text=f"{reply_text}\n\n抱歉，生成讀經計畫訊息時發生錯誤：{e}")]
             
             messaging_api.reply_message(
                 ReplyMessageRequest(
