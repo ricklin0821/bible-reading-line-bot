@@ -214,7 +214,7 @@ def get_all_users_with_plan():
     
     return users
 
-def get_current_reading_plan(db, user: User) -> str:
+def get_current_reading_plan(user: User) -> str:
     """獲取使用者當天的讀經計畫內容 (原始字串)"""
     plan = BiblePlan.get_by_day(user.plan_type, user.current_day)
     
@@ -496,7 +496,7 @@ def handle_message(event):
             
             reply_text = f"太棒了！您已選擇「{plan_name}」。\n\n我們將從今天 (第 1 天) 開始！"
             
-            readings = get_current_reading_plan(db, user)
+            readings = get_current_reading_plan(user)
             plan_message = get_reading_plan_message(user, readings) 
             
             messaging_api.reply_message(
@@ -575,7 +575,7 @@ def handle_message(event):
             user.save()
             
             next_day_user = User.get_by_line_user_id(line_user_id)
-            next_day_readings = get_current_reading_plan(db, next_day_user)
+            next_day_readings = get_current_reading_plan(next_day_user)
             next_day_message = get_reading_plan_message(next_day_user, next_day_readings) 
             
             reply_messages.append(TextMessage(text="恭喜您！今天的讀經與測驗都完成了！\n\n這是您明天的讀經計畫："))
@@ -596,7 +596,7 @@ def handle_message(event):
     default_message_text = "我不太明白您的意思。請點擊「回報已完成讀經」按鈕來開始今天的測驗。"
     
     if user.plan_type and user.quiz_state == "IDLE" and user.last_read_date != date.today():
-         readings = get_current_reading_plan(db, user)
+         readings = get_current_reading_plan(user)
          plan_message = get_reading_plan_message(user, readings) 
          messaging_api.reply_message(
             ReplyMessageRequest(
@@ -668,7 +668,7 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
                  user.current_day += 1
                  user.save()
             
-            readings = get_current_reading_plan(db, user)
+            readings = get_current_reading_plan(user)
             
             message = get_reading_plan_message(user, readings) 
             send_message(user.line_user_id, [message], messaging_api)
@@ -679,7 +679,7 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
         # ------------------------------------------------------------------
         elif push_time in ['noon', 'evening', 'night']:
             if not is_completed:
-                readings = get_current_reading_plan(db, user)
+                readings = get_current_reading_plan(user)
                 
                 if push_time == 'night':
                     encouraging_verse_data = get_random_encouraging_verse()
