@@ -655,24 +655,43 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
         last_read = user.last_read_date
         if isinstance(last_read, datetime):
             last_read = last_read.date()
+        elif last_read is None:
+            last_read = date(1970, 1, 1) # 設置一個很早的日期，確保第一次使用時不會被誤判為已完成
+            
         is_completed = last_read == today
         
         # ------------------------------------------------------------------
         # 1. 早上 6 點 (morning): 推送當天計畫
         # ------------------------------------------------------------------
         if push_time == 'morning':
+            # 修正邏輯：在早上推送時，檢查使用者是否已完成昨天的讀經。
+            # 如果昨天已完成 (last_read_date == yesterday)，則將 current_day + 1。
+            # 如果 last_read_date < yesterday (或 None)，則保持 current_day 不變，
+            # 因為使用者已經落後，不應該自動跳過進度。
             yesterday = date.today() - timedelta(days=1)
-            if user.last_read_date is None or user.last_read_date < yesterday:
-                 pass
-            elif user.last_read_date == yesterday:
+            
+            # 確保 last_read_date 是 date 物件
+            last_read = user.last_read_date
+            if isinstance(last_read, datetime):
+                last_read = last_read.date()
+                
+            if last_read == yesterday:
                  user.current_day += 1
                  user.save()
             
-            readings = get_current_reading_plan(user)
+            # 確保使用者不會超前 (current_day 最大為 365)
+            if user.current_day > 365:
+                user.current_day = 365
+                user.save()
             
-            message = get_reading_plan_message(user, readings) 
-            send_message(user.line_user_id, [message], messaging_api)
-            pushed_count += 1
+            # 修正邏輯：只有當使用者今天還沒有完成讀經時，才推送今日計畫。
+            # 這樣可以避免重複推送，並且確保使用者收到的是當前的計畫。
+            if not is_completed:
+                readings = get_current_reading_plan(user)
+                
+                message = get_reading_plan_message(user, readings) 
+                send_message(user.line_user_id, [message], messaging_api)
+                pushed_count += 1
         
         # ------------------------------------------------------------------
         # 2. 中午/傍晚/晚上 (noon, evening, night): 提醒邏輯
