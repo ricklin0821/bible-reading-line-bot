@@ -500,7 +500,8 @@ def handle_message(event):
             
             reply_text = f"太棒了！您已選擇「{plan_name}」。\n\n我們將從今天 (第 1 天) 開始！"
             
-            readings = get_current_reading_plan(user)
+            plan = get_current_reading_plan(user)
+            readings = plan.get('readings', '今日無讀經計畫') if isinstance(plan, dict) else plan
             plan_message = get_reading_plan_message(user, readings) 
             
             messaging_api.reply_message(
@@ -691,7 +692,8 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
             # 修正邏輯：只有當使用者今天還沒有完成讀經時，才推送今日計畫。
             # 這樣可以避免重複推送，並且確保使用者收到的是當前的計畫。
             if not is_completed:
-                readings = get_current_reading_plan(user)
+                plan = get_current_reading_plan(user)
+            readings = plan.get('readings', '今日無讀經計畫') if isinstance(plan, dict) else plan
                 
                 message = get_reading_plan_message(user, readings) 
                 send_message(user.line_user_id, [message], messaging_api)
@@ -702,7 +704,8 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
         # ------------------------------------------------------------------
         elif push_time in ['noon', 'evening', 'night']:
             if not is_completed:
-                readings = get_current_reading_plan(user)
+                plan = get_current_reading_plan(user)
+            readings = plan.get('readings', '今日無讀經計畫') if isinstance(plan, dict) else plan
                 
                 if push_time == 'night':
                     encouraging_verse_data = get_random_encouraging_verse()
