@@ -580,7 +580,8 @@ def handle_message(event):
             user.save()
             
             next_day_user = User.get_by_line_user_id(line_user_id)
-            next_day_readings = get_current_reading_plan(next_day_user)
+            next_day_plan = get_current_reading_plan(next_day_user)
+            next_day_readings = next_day_plan.get('readings', '今日無讀經計畫') if isinstance(next_day_plan, dict) else next_day_plan
             next_day_message = get_reading_plan_message(next_day_user, next_day_readings) 
             
             reply_messages.append(TextMessage(text="恭喜您！今天的讀經與測驗都完成了！\n\n這是您明天的讀經計畫："))
@@ -601,7 +602,8 @@ def handle_message(event):
     default_message_text = "我不太明白您的意思。請點擊「回報已完成讀經」按鈕來開始今天的測驗。"
     
     if user.plan_type and user.quiz_state == "IDLE" and user.last_read_date != date.today():
-         readings = get_current_reading_plan(user)
+         plan = get_current_reading_plan(user)
+         readings = plan.get('readings', '今日無讀經計畫') if isinstance(plan, dict) else plan
          plan_message = get_reading_plan_message(user, readings) 
          messaging_api.reply_message(
             ReplyMessageRequest(
