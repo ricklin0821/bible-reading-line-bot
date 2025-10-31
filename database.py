@@ -206,11 +206,12 @@ class BibleText:
     def get_verses_by_reference(book_abbr: str, chapter: int) -> List[Dict[str, Any]]:
         """查詢整章經文"""
         texts_ref = db.collection(BIBLE_TEXT_COLLECTION)
+        # 移除 order_by 以避免需要複合索引
         query = texts_ref.where(
             filter=firestore.FieldFilter('book_abbr', '==', book_abbr)
         ).where(
             filter=firestore.FieldFilter('chapter', '==', chapter)
-        ).order_by('verse')
+        )
         
         docs = query.stream()
         
@@ -219,6 +220,9 @@ class BibleText:
             verse_data = doc.to_dict()
             verse_data['_id'] = doc.id
             verses.append(verse_data)
+        
+        # 在應用層排序
+        verses.sort(key=lambda v: v['verse'])
         
         return verses
     
@@ -230,13 +234,14 @@ class BibleText:
         texts_ref = db.collection(BIBLE_TEXT_COLLECTION)
         
         # 基本查詢：書卷和章節範圍
+        # 移除 order_by 以避免需要複合索引
         query = texts_ref.where(
             filter=firestore.FieldFilter('book_abbr', '==', book_abbr)
         ).where(
             filter=firestore.FieldFilter('chapter', '>=', start_chap)
         ).where(
             filter=firestore.FieldFilter('chapter', '<=', end_chap)
-        ).order_by('chapter').order_by('verse')
+        )
         
         docs = query.stream()
         
@@ -252,6 +257,9 @@ class BibleText:
                 continue
             
             verses.append(verse_data)
+        
+        # 在應用層排序（先按章節，再按節數）
+        verses.sort(key=lambda v: (v['chapter'], v['verse']))
         
         return verses
     
