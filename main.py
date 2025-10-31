@@ -544,7 +544,7 @@ def handle_message(event):
     report_keywords = ["回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]
     if text in report_keywords:
         # 檢查今天是否已完成測驗
-        if user.last_read_date == date.today():
+        if user.last_read_date == date.today().isoformat():
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -611,7 +611,7 @@ def handle_message(event):
         # 檢查是否完成測驗
         if user.quiz_state == "QUIZ_COMPLETED":
             print(f"[DEBUG] Quiz completed for user {line_user_id}")
-            user.last_read_date = date.today()
+            user.last_read_date = date.today().isoformat()  # 轉換為字串以支援 Firestore
             user.current_day += 1 
             print(f"[DEBUG] Updated current_day to {user.current_day}")
             user.quiz_state = "IDLE"
@@ -692,7 +692,7 @@ def handle_message(event):
     # 預設回覆
     default_message_text = "我不太明白您的意思。🤔\n\n發送 '幫助' 查看使用指南，或點擊下方按鈕開始今天的讀經。"
     
-    if user.plan_type and user.quiz_state == "IDLE" and user.last_read_date != date.today():
+    if user.plan_type and user.quiz_state == "IDLE" and user.last_read_date != date.today().isoformat():
          readings = get_current_reading_plan(user)
          plan_message = get_reading_plan_message(user, readings) 
          messaging_api.reply_message(
