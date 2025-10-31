@@ -486,6 +486,44 @@
             font-size: 14px;
         }
 
+        /* 操作按鈕 */
+        .action-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .action-btn-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+        }
+
+        .action-btn-warning:hover {
+            background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+        }
+
+        .action-btn-danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #991b1b;
+        }
+
+        .action-btn-danger:hover {
+            background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+        }
+
         /* 響應式設計 */
         @media (max-width: 768px) {
             .sidebar {
@@ -879,28 +917,39 @@
                                     <th>當前天數</th>
                                     <th>進度</th>
                                     <th>最後閱讀</th>
+                                    <th>操作</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${usersData.map(user => `
-                                    <tr onclick="showUserDetail('${user.id}')" style="cursor: pointer;">
-                                        <td>
+                                    <tr>
+                                        <td onclick="showUserDetail('${user.id}')" style="cursor: pointer;">
                                             <div class="user-name">${user.display_name || '未設定'}</div>
                                             <div class="user-id">${user.line_user_id}</div>
                                         </td>
-                                        <td>
+                                        <td onclick="showUserDetail('${user.id}')" style="cursor: pointer;">
                                             <span class="badge ${user.plan_type === 'Canonical' ? 'badge-canonical' : user.plan_type === 'Balanced' ? 'badge-balanced' : 'badge-none'}">
                                                 ${user.plan_type === 'Canonical' ? '按卷順序' : user.plan_type === 'Balanced' ? '平衡讀經' : '未選擇'}
                                             </span>
                                         </td>
-                                        <td><strong>${user.current_day}</strong> / 365</td>
-                                        <td>
+                                        <td onclick="showUserDetail('${user.id}')" style="cursor: pointer;"><strong>${user.current_day}</strong> / 365</td>
+                                        <td onclick="showUserDetail('${user.id}')" style="cursor: pointer;">
                                             <div class="progress-bar">
                                                 <div class="progress-fill" style="width: ${user.progress_percent}%"></div>
                                             </div>
                                             <div class="progress-text">${user.progress_percent}%</div>
                                         </td>
-                                        <td>${user.last_read_date || '尚未開始'}</td>
+                                        <td onclick="showUserDetail('${user.id}')" style="cursor: pointer;">${user.last_read_date || '尚未開始'}</td>
+                                        <td>
+                                            <div style="display: flex; gap: 8px; justify-content: center;">
+                                                <button class="action-btn action-btn-warning" onclick="event.stopPropagation(); resetQuiz('${user.line_user_id}', '${user.display_name || '未設定'}')" title="重置測驗狀態">
+                                                    🔄 測驗
+                                                </button>
+                                                <button class="action-btn action-btn-danger" onclick="event.stopPropagation(); resetProgress('${user.line_user_id}', '${user.display_name || '未設定'}')" title="重置讀經進度">
+                                                    ⚠️ 進度
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -1043,6 +1092,61 @@
             if (confirm('確定要登出嗎？')) {
                 sessionStorage.removeItem('adminAuth');
                 window.location.href = '/admin/login';
+            }
+        }
+
+        // 重置測驗狀態
+        async function resetQuiz(lineUserId, displayName) {
+            if (!confirm(`確定要重置「${displayName}」的測驗狀態嗎？\n\n這將清除該使用者當前的測驗進度，但保留讀經進度。`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/users/${lineUserId}/reset-quiz`, {
+                    method: 'POST',
+                    headers: { 'Authorization': authHeader }
+                });
+
+                if (!response.ok) throw new Error('重置失敗');
+
+                const result = await response.json();
+                alert(`✅ 成功！\n\n${result.message}`);
+                
+                // 重新載入使用者列表
+                loadUsers();
+
+            } catch (error) {
+                alert(`❌ 重置失敗：${error.message}`);
+            }
+        }
+
+        // 重置讀經進度
+        async function resetProgress(lineUserId, displayName) {
+            if (!confirm(`⚠️ 警告！\n\n確定要重置「${displayName}」的讀經進度嗎？\n\n這將清除該使用者的所有進度，回到第 1 天，此操作無法復原！`)) {
+                return;
+            }
+
+            // 二次確認
+            if (!confirm(`再次確認：真的要重置「${displayName}」的所有進度嗎？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/users/${lineUserId}/reset-progress`, {
+                    method: 'POST',
+                    headers: { 'Authorization': authHeader }
+                });
+
+                if (!response.ok) throw new Error('重置失敗');
+
+                const result = await response.json();
+                alert(`✅ 成功！\n\n${result.message}`);
+                
+                // 重新載入使用者列表
+                loadUsers();
+
+            } catch (error) {
+                alert(`❌ 重置失敗：${error.message}`);
             }
         }
 
