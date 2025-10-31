@@ -391,6 +391,80 @@
                 opacity: 1;
             }
         }
+        
+        /* 列印樣式 */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            .modal,
+            .modal * {
+                visibility: visible;
+            }
+            
+            .modal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: auto;
+                background: white;
+            }
+            
+            .modal-content {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
+                max-height: none;
+                box-shadow: none;
+                border-radius: 0;
+            }
+            
+            .modal-controls,
+            .close {
+                display: none !important;
+            }
+            
+            .modal-header {
+                background: #667eea !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                page-break-after: avoid;
+            }
+            
+            .modal-body {
+                padding: 20px;
+                max-height: none;
+            }
+            
+            .plan-table {
+                width: 100%;
+                page-break-inside: auto;
+            }
+            
+            .plan-table tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            
+            .plan-table thead {
+                display: table-header-group;
+            }
+            
+            .plan-table th {
+                background: #667eea !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .plan-table tbody tr:nth-child(even) {
+                background: #f5f5f5 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
 
         .stats-section {
             display: grid;
@@ -910,18 +984,27 @@
         // 搜尋功能
         function searchPlan() {
             const searchBox = document.getElementById('searchBox');
-            const searchTerm = searchBox.value.toLowerCase();
+            const searchTerm = searchBox.value.toLowerCase().trim();
             
             if (!searchTerm) {
                 renderPlanTable(currentPlanData);
                 return;
             }
             
+            // 提取搜尋詞中的數字
+            const numberMatch = searchTerm.match(/\d+/);
+            const searchNumber = numberMatch ? parseInt(numberMatch[0]) : null;
+            
             // 搜尋天數或經文範圍
             const filtered = currentPlanData.filter(item => {
-                const dayText = `第 ${item.day} 天`.toLowerCase();
+                // 支援多種格式：「10」、「第10天」、「第 10 天」
+                if (searchNumber !== null && item.day === searchNumber) {
+                    return true;
+                }
+                
+                // 搜尋經文範圍
                 const readings = item.readings.toLowerCase();
-                return dayText.includes(searchTerm) || readings.includes(searchTerm) || item.day.toString() === searchTerm;
+                return readings.includes(searchTerm);
             });
             
             renderPlanTable(filtered);
