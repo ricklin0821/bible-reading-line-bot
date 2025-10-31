@@ -230,16 +230,27 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
         return [TextMessage(text="測驗狀態錯誤，請重新開始測驗。")], user
 
     correct_answer = question["answer"]
-    user_answer = answer.strip().lower()
+    user_answer = answer.strip()
     
     # 除錯日誌
     print(f"[DEBUG] Answer comparison:")
-    print(f"  User answer: '{user_answer}' (length: {len(user_answer)})")
-    print(f"  Correct answer: '{correct_answer}' (length: {len(correct_answer)})")
-    print(f"  Correct answer (lower): '{correct_answer.strip().lower()}' (length: {len(correct_answer.strip().lower())})")
+    print(f"  User answer (raw): '{user_answer}' (length: {len(user_answer)})")
+    print(f"  Correct answer (raw): '{correct_answer}' (length: {len(correct_answer)})")
     
-    # 答案比對 (忽略大小寫，並移除可能的空格)
-    is_correct = user_answer == correct_answer.strip().lower()
+    # 移除所有標點符號和空白字元，只比對文字內容
+    def clean_answer(text):
+        # 移除所有標點符號、空栽、特殊字元
+        cleaned = re.sub(r'[\s，。！？：「」；、,\.!\?:;"\'\(\)\[\]\{\}]', '', text)
+        return cleaned.lower()
+    
+    user_answer_clean = clean_answer(user_answer)
+    correct_answer_clean = clean_answer(correct_answer)
+    
+    print(f"  User answer (clean): '{user_answer_clean}' (length: {len(user_answer_clean)})")
+    print(f"  Correct answer (clean): '{correct_answer_clean}' (length: {len(correct_answer_clean)})")
+    
+    # 答案比對
+    is_correct = user_answer_clean == correct_answer_clean
     print(f"[DEBUG] Is correct: {is_correct}")
     
     if is_correct:
