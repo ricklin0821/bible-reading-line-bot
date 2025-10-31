@@ -610,18 +610,32 @@ def handle_message(event):
         
         # 檢查是否完成測驗
         if user.quiz_state == "QUIZ_COMPLETED":
+            print(f"[DEBUG] Quiz completed for user {line_user_id}")
             user.last_read_date = date.today()
             user.current_day += 1 
+            print(f"[DEBUG] Updated current_day to {user.current_day}")
             user.quiz_state = "IDLE"
             user.quiz_data = "{}"
             user.save()
+            print(f"[DEBUG] User data saved")
             
-            next_day_user = User.get_by_line_user_id(line_user_id)
-            next_day_readings = get_current_reading_plan(next_day_user)
-            next_day_message = get_reading_plan_message(next_day_user, next_day_readings) 
-            
-            reply_messages.append(TextMessage(text="恭喜您！今天的讀經與測驗都完成了！\n\n這是您明天的讀經計畫："))
-            reply_messages.append(next_day_message)
+            try:
+                next_day_user = User.get_by_line_user_id(line_user_id)
+                print(f"[DEBUG] Retrieved next_day_user: current_day={next_day_user.current_day}")
+                
+                next_day_readings = get_current_reading_plan(next_day_user)
+                print(f"[DEBUG] Next day readings: {next_day_readings}")
+                
+                next_day_message = get_reading_plan_message(next_day_user, next_day_readings)
+                print(f"[DEBUG] Next day message generated successfully")
+                
+                reply_messages.append(TextMessage(text="恭喜您！今天的讀經與測驗都完成了！\n\n這是您明天的讀經計畫："))
+                reply_messages.append(next_day_message)
+            except Exception as e:
+                print(f"[ERROR] Failed to generate next day plan: {e}")
+                import traceback
+                traceback.print_exc()
+                reply_messages.append(TextMessage(text=f"恭喜您！今天的讀經與測驗都完成了！\n\n無法取得明天的讀經計畫，請再次選擇讀經計畫。\n\n錯誤：{str(e)}"))
         else:
             user.save() 
             
