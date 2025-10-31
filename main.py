@@ -648,8 +648,49 @@ def handle_message(event):
         return
 
     # --- 預設回覆 ---
-    # (修正) 更新預設回覆的提示文字
-    default_message_text = "我不太明白您的意思。請點擊「回報已完成讀經」按鈕來開始今天的測驗。"
+    # 根據使用者輸入提供更友善的回應
+    
+    # 常見問候語和回應
+    greetings = ["你好", "哈囉", "hi", "hello", "早安", "晚安", "午安", "嗨嗨"]
+    help_keywords = ["幫助", "help", "怎麼用", "如何使用", "功能"]
+    
+    if text.lower() in greetings:
+        greeting_response = (
+            f"您好！我是聖經讀經助手📚\n\n"
+            f"很高興能陪伴您一起讀經！\n\n"
+        )
+        if not user.plan_type:
+            greeting_response += "請選擇您的讀經計畫：\n1️⃣ 按卷順序計畫\n2️⃣ 平衡讀經計畫"
+        else:
+            greeting_response += f"您正在進行「{user.plan_type}」計畫，目前是第 {user.current_day} 天！"
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=greeting_response)]
+            )
+        )
+        return
+    
+    if any(keyword in text for keyword in help_keywords):
+        help_response = (
+            "📚 聖經讀經助手使用指南\n\n"
+            "🔹 選擇讀經計畫：發送 '1' 或 '2'\n"
+            "🔹 回報完成讀經：點擊「✅ 回報已完成讀經」按鈕\n"
+            "🔹 進行經文測驗：完成讀經後自動開始\n"
+            "🔹 聯繫作者：點擊「✉️ 聯繫作者」按鈕\n\n"
+            "願神的話語常在您心裡！🙏"
+        )
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=help_response)]
+            )
+        )
+        return
+    
+    # 預設回覆
+    default_message_text = "我不太明白您的意思。🤔\n\n發送 '幫助' 查看使用指南，或點擊下方按鈕開始今天的讀經。"
     
     if user.plan_type and user.quiz_state == "IDLE" and user.last_read_date != date.today():
          readings = get_current_reading_plan(user)

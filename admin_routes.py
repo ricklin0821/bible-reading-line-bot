@@ -347,3 +347,54 @@ def export_stats_csv(admin: str = Depends(verify_admin)):
         }
     )
 
+
+
+# --- 使用者管理 API ---
+
+@router.post("/users/{line_user_id}/reset-quiz")
+def reset_user_quiz(line_user_id: str, admin: str = Depends(verify_admin)):
+    """重置使用者的測驗狀態"""
+    from database import User
+    
+    user = User.get_by_line_user_id(line_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.quiz_state = "IDLE"
+    user.quiz_data = "{}"
+    user.save()
+    
+    return {
+        "success": True,
+        "message": f"已重置使用者 {line_user_id} 的測驗狀態",
+        "user": {
+            "line_user_id": user.line_user_id,
+            "quiz_state": user.quiz_state,
+            "current_day": user.current_day
+        }
+    }
+
+@router.post("/users/{line_user_id}/reset-progress")
+def reset_user_progress(line_user_id: str, admin: str = Depends(verify_admin)):
+    """重置使用者的讀經進度"""
+    from database import User
+    
+    user = User.get_by_line_user_id(line_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.current_day = 1
+    user.last_read_date = None
+    user.quiz_state = "IDLE"
+    user.quiz_data = "{}"
+    user.save()
+    
+    return {
+        "success": True,
+        "message": f"已重置使用者 {line_user_id} 的讀經進度",
+        "user": {
+            "line_user_id": user.line_user_id,
+            "current_day": user.current_day,
+            "quiz_state": user.quiz_state
+        }
+    }
