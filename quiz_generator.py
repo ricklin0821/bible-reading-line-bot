@@ -232,8 +232,15 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
     correct_answer = question["answer"]
     user_answer = answer.strip().lower()
     
+    # 除錯日誌
+    print(f"[DEBUG] Answer comparison:")
+    print(f"  User answer: '{user_answer}' (length: {len(user_answer)})")
+    print(f"  Correct answer: '{correct_answer}' (length: {len(correct_answer)})")
+    print(f"  Correct answer (lower): '{correct_answer.strip().lower()}' (length: {len(correct_answer.strip().lower())})")
+    
     # 答案比對 (忽略大小寫，並移除可能的空格)
     is_correct = user_answer == correct_answer.strip().lower()
+    print(f"[DEBUG] Is correct: {is_correct}")
     
     if is_correct:
         # 答對：給予高度肯定與情緒價值
