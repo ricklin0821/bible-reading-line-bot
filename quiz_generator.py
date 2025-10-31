@@ -299,7 +299,7 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
         elif question["attempts"] == 2:
             # 第二次答錯：出示答案，並給予鼓勵
             message_text = (
-                f"沒關係，再接再厲！💪\n\n"
+                f"沒關係，再接再勵！💪\n\n"
                 f"正確答案是：**{correct_answer}**\n\n"
                 f"完整的經文是：{question['full_verse']}\n\n"
             )
@@ -307,6 +307,8 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
             
             # 自動進入下一題
             quiz_data["current_question_index"] += 1
+            # 立即更新 quiz_data，確保狀態同步
+            user['quiz_data'] = json.dumps(quiz_data)
             
             if quiz_data["current_question_index"] < len(quiz_data["questions"]):
                 # 還有下一題
@@ -323,9 +325,9 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
                 # 測驗完成 (雖然有錯，但題目已結束)
                 user['quiz_state'] = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
                 reply_messages.append(TextMessage(text="今天的測驗結束了！無論結果如何，您願意花時間讀經和學習，就是最棒的！願神祝福您！"))
-                
-        # 更新測驗數據
-        user['quiz_data'] = json.dumps(quiz_data)
+        else:
+            # 更新測驗數據（第一次答錯的情況）
+            user['quiz_data'] = json.dumps(quiz_data)
         
     return reply_messages, user
     
