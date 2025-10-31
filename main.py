@@ -325,7 +325,7 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
                 FlexButton(
                     action=URIAction(
                         label="📤 分享經文",
-                        uri=f"https://line.me/R/share?text={quote('【今日讀經】' + readings)}"
+                        uri=f"https://line.me/R/share?text={quote(f'【今日讀經】{readings}\n\n📚 一起加入一年讀經計畫！\n每天讀聖經、做測驗，讓神的話語成為生命的力量。\n\n✨ 搜尋「一年讀經計畫」或請朋友分享 LINE Bot 給你，一起每日讀經！')}"
                     ),
                     style="link",
                     height="sm"
@@ -347,26 +347,37 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
 def handle_follow(event):
     """（已修正） 處理使用者加入好友事件，使用按鈕選擇計畫"""
     line_user_id = event.source.user_id
+    print(f"[DEBUG] New user follow event: {line_user_id}")
     
     # 取得使用者顯示名稱
     messaging_api: MessagingApi = next(get_messaging_api())
     try:
         profile = messaging_api.get_profile(line_user_id)
         display_name = profile.display_name
-    except:
+        print(f"[DEBUG] User display name: {display_name}")
+    except Exception as e:
+        print(f"[ERROR] Failed to get user profile: {e}")
         display_name = None
     
-    user = User.get_by_line_user_id(line_user_id)
-    
-    if not user:
-        new_user = User.create(line_user_id=line_user_id, plan_type=None)
-        if display_name:
-            new_user.display_name = display_name
-            new_user.save()
-    elif not user.display_name and display_name:
-        # 更新現有使用者的顯示名稱
-        user.display_name = display_name
-        user.save()
+    try:
+        user = User.get_by_line_user_id(line_user_id)
+        
+        if not user:
+            print(f"[DEBUG] Creating new user: {line_user_id}")
+            new_user = User.create(line_user_id=line_user_id, plan_type=None)
+            if display_name:
+                new_user.display_name = display_name
+                new_user.save()
+            print(f"[DEBUG] New user created successfully")
+        elif not user.display_name and display_name:
+            # 更新現有使用者的顯示名稱
+            print(f"[DEBUG] Updating existing user display name")
+            user.display_name = display_name
+            user.save()
+    except Exception as e:
+        print(f"[ERROR] Failed to create/update user: {e}")
+        import traceback
+        traceback.print_exc()
     
     welcome_message = TextMessage(text="歡迎加入一年讀經計畫！\n\n請先選擇您想進行的讀經計畫：")
     
@@ -389,13 +400,20 @@ def handle_follow(event):
         )
     )
     
-    messaging_api: MessagingApi = next(get_messaging_api())
-    messaging_api.reply_message(
-        ReplyMessageRequest(
-            reply_token=event.reply_token,
-            messages=[welcome_message, plan_selection_message]
+    try:
+        messaging_api: MessagingApi = next(get_messaging_api())
+        print(f"[DEBUG] Sending welcome message to {line_user_id}")
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[welcome_message, plan_selection_message]
+            )
         )
-    )
+        print(f"[DEBUG] Welcome message sent successfully")
+    except Exception as e:
+        print(f"[ERROR] Failed to send welcome message: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @handler.add(MessageEvent, message=TextMessageContent)
