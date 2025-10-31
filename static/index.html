@@ -210,6 +210,186 @@
             font-size: 0.95em;
             opacity: 0.95;
             line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .preview-button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        .preview-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* 彈出視窗樣式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 1000px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+        
+        .close {
+            color: white;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            line-height: 1;
+        }
+        
+        .close:hover {
+            transform: scale(1.2);
+        }
+        
+        .modal-body {
+            padding: 30px;
+            max-height: calc(90vh - 200px);
+            overflow-y: auto;
+        }
+        
+        .modal-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 20px;
+            border: 2px solid #667eea;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        .search-box:focus {
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .action-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .plan-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .plan-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .plan-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .plan-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .day-number {
+            font-weight: 600;
+            color: #667eea;
+            min-width: 80px;
+        }
+        
+        .readings {
+            color: #333;
+            font-size: 1.05em;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .stats-section {
@@ -528,14 +708,16 @@
                 <h2>📅 選擇您的讀經計畫</h2>
                 
                 <div class="plan-grid">
-                    <div class="plan-card" onclick="showPlanDetails('Canonical')">
+                    <div class="plan-card">
                         <h3>📜 按卷順序計畫</h3>
-                        <p>從創世記到啟示錄，按照聖經書卷的順序閱讀。適合想要系統性了解聖經架構的讀者。每天約 3 章，一年內讀完整本聖經。</p>
+                        <p>從創世記到啟示錄，按照聖經書卷的順序閱讀。適合想要系統性了解聖經架構的讀者。每天約3 章，一年內讀完整本聖經。</p>
+                        <button class="preview-button" onclick="showPlanPreview('Canonical')">🔍 預覽完整計畫</button>
                     </div>
 
-                    <div class="plan-card" onclick="showPlanDetails('Balanced')">
+                    <div class="plan-card">
                         <h3>⚖️ 均衡閱讀計畫</h3>
                         <p>每天同時閱讀舊約和新約，保持閱讀的多樣性和新鮮感。適合喜歡變化、想要平衡認識新舊約的讀者。</p>
+                        <button class="preview-button" onclick="showPlanPreview('Balanced')">🔍 預覽完整計畫</button>
                     </div>
                 </div>
 
@@ -625,6 +807,38 @@
         </div>
     </div>
 
+    <!-- 讀經計畫預覽彈出視窗 -->
+    <div id="planModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">讀經計畫預覽</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-controls">
+                    <input type="text" id="searchBox" class="search-box" placeholder="🔍 搜尋特定天數（例：第 10 天）" onkeyup="searchPlan()">
+                    <div class="action-buttons">
+                        <button class="action-btn" onclick="printPlan()">🖨️ 列印</button>
+                        <button class="action-btn" onclick="downloadPDF()">📄 下載 PDF</button>
+                    </div>
+                </div>
+                <div id="planTableContainer">
+                    <table class="plan-table" id="planTable">
+                        <thead>
+                            <tr>
+                                <th>天數</th>
+                                <th>讀經範圍</th>
+                            </tr>
+                        </thead>
+                        <tbody id="planTableBody">
+                            <!-- 將由 JavaScript 動態填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 版權宣告區塊 -->
     <footer class="footer">
         <div class="footer-content">
@@ -639,13 +853,103 @@
     </footer>
 
     <script>
-        function showPlanDetails(planType) {
-            const planNames = {
-                'Canonical': '按卷順序計畫',
-                'Balanced': '均衡閱讀計畫'
-            };
+        let currentPlanData = [];
+        let currentPlanType = '';
+        
+        const planNames = {
+            'Canonical': '📜 按卷順序計畫',
+            'Balanced': '⚖️ 均衡閱讀計畫'
+        };
+        
+        // 顯示讀經計畫預覽
+        async function showPlanPreview(planType) {
+            currentPlanType = planType;
+            const modal = document.getElementById('planModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const tableBody = document.getElementById('planTableBody');
             
-            alert(`您選擇了「${planNames[planType]}」\n\n請加入 LINE 官方帳號後，在對話框中選擇此計畫即可開始讀經之旅！`);
+            // 設定標題
+            modalTitle.textContent = planNames[planType] + ' - 完整 365 天計畫';
+            
+            // 顯示載入中
+            tableBody.innerHTML = '<tr><td colspan="2" style="text-align: center; padding: 40px;">🔄 載入中...</td></tr>';
+            modal.style.display = 'block';
+            
+            try {
+                // 從 API 獲取讀經計畫
+                const response = await fetch(`/api/bible-plans/${planType}`);
+                const data = await response.json();
+                
+                if (data.plan) {
+                    currentPlanData = data.plan;
+                    renderPlanTable(currentPlanData);
+                } else {
+                    tableBody.innerHTML = '<tr><td colspan="2" style="text-align: center; padding: 40px; color: red;">❗ 無法載入讀經計畫</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading plan:', error);
+                tableBody.innerHTML = '<tr><td colspan="2" style="text-align: center; padding: 40px; color: red;">❗ 載入失敗，請稍後再試</td></tr>';
+            }
+        }
+        
+        // 渲染讀經計畫表格
+        function renderPlanTable(planData) {
+            const tableBody = document.getElementById('planTableBody');
+            tableBody.innerHTML = '';
+            
+            planData.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="day-number">第 ${item.day} 天</td>
+                    <td class="readings">${item.readings}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // 搜尋功能
+        function searchPlan() {
+            const searchBox = document.getElementById('searchBox');
+            const searchTerm = searchBox.value.toLowerCase();
+            
+            if (!searchTerm) {
+                renderPlanTable(currentPlanData);
+                return;
+            }
+            
+            // 搜尋天數或經文範圍
+            const filtered = currentPlanData.filter(item => {
+                const dayText = `第 ${item.day} 天`.toLowerCase();
+                const readings = item.readings.toLowerCase();
+                return dayText.includes(searchTerm) || readings.includes(searchTerm) || item.day.toString() === searchTerm;
+            });
+            
+            renderPlanTable(filtered);
+        }
+        
+        // 關閉彈出視窗
+        function closeModal() {
+            const modal = document.getElementById('planModal');
+            modal.style.display = 'none';
+            document.getElementById('searchBox').value = '';
+        }
+        
+        // 點擊外部關閉
+        window.onclick = function(event) {
+            const modal = document.getElementById('planModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+        
+        // 列印功能
+        function printPlan() {
+            window.print();
+        }
+        
+        // 下載 PDF 功能
+        function downloadPDF() {
+            alert('📥 PDF 下載功能即將推出！\n\n目前您可以使用「列印」功能，然後選擇「另存為 PDF」來保存讀經計畫。');
         }
     </script>
 </body>
