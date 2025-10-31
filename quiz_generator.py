@@ -289,12 +289,14 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
         if question["attempts"] == 1:
             # 第一次答錯：回應填充題的經文，再次詢問答案
             message_text = (
-                f"再想想看喔！😊\n\n"
+                f"再想想看嗎！😊\n\n"
                 f"這節經文是：{question['full_verse']}\n\n"
                 f"請問：{question['quiz_text']}\n\n"
                 "請再次輸入您的答案。"
             )
             reply_messages.append(TextMessage(text=message_text))
+            # 更新 quiz_data，確保 attempts 被儲存
+            user['quiz_data'] = json.dumps(quiz_data)
             
         elif question["attempts"] == 2:
             # 第二次答錯：出示答案，並給予鼓勵
@@ -325,9 +327,6 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
                 # 測驗完成 (雖然有錯，但題目已結束)
                 user['quiz_state'] = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
                 reply_messages.append(TextMessage(text="今天的測驗結束了！無論結果如何，您願意花時間讀經和學習，就是最棒的！願神祝福您！"))
-        else:
-            # 更新測驗數據（第一次答錯的情況）
-            user['quiz_data'] = json.dumps(quiz_data)
         
     return reply_messages, user
     
