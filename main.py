@@ -22,6 +22,7 @@ from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_dail
 from api_routes import router as api_router
 from admin_routes import router as admin_router
 from admin_auth import router as admin_auth_router
+from preview_routes import router as preview_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -39,6 +40,7 @@ app = FastAPI()
 app.include_router(api_router)
 app.include_router(admin_router)
 app.include_router(admin_auth_router)
+app.include_router(preview_router)
 
 # 靜態檔案服務
 try:
@@ -225,8 +227,11 @@ def get_current_reading_plan(user: User) -> str:
     return "今日無讀經計畫或計畫已完成。"
 
 def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
-    """(已修正) 生成讀經計畫的 FlexMessage，包含大按鈕"""
+    """（已修正） 生成讀經計畫的 FlexMessage，包含大按鈕"""
     plan_name = "按卷順序計畫" if user.plan_type == "Canonical" else "平衡讀經計畫"
+    
+    # 定義分享文字（避免 f-string 中使用反斜線）
+    share_text = f"【今日讀經】{readings}\n\n📚 一起加入一年讀經計畫！\n每天讀聖經、做測驗，讓神的話語成為生命的力量。\n\n✨ 搜尋「一年讀經計畫」或請朋友分享 LINE Bot 給你，一起每日讀經！"
     
     parsed_readings = parse_readings(readings)
     body_contents = []
@@ -325,7 +330,7 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
                 FlexButton(
                     action=URIAction(
                         label="📤 分享經文",
-                        uri=f"https://line.me/R/share?text={quote(f'【今日讀經】{readings}\n\n📚 一起加入一年讀經計畫！\n每天讀聖經、做測驗，讓神的話語成為生命的力量。\n\n✨ 搜尋「一年讀經計畫」或請朋友分享 LINE Bot 給你，一起每日讀經！')}"
+                        uri=f"https://line.me/R/share?text={quote(share_text)}"
                     ),
                     style="link",
                     height="sm"
