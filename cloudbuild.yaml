@@ -1,29 +1,68 @@
 steps:
-  # 建置 Docker 映像檔
+  # 步驟 1: 建置 Docker 映像檔
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/bible-bot-project/bible-bot:latest', '.']
+    id: 'build-image'
+    args: ['build', '-t', 'gcr.io/bible-bot-project/bible-bot:$SHORT_SHA', '-t', 'gcr.io/bible-bot-project/bible-bot:latest', '.']
   
-  # 推送映像檔到 Container Registry
+  # 步驟 2: 推送映像檔到 Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/bible-bot-project/bible-bot:latest']
+    id: 'push-image'
+    args: ['push', '--all-tags', 'gcr.io/bible-bot-project/bible-bot']
+    waitFor: ['build-image']
   
-  # 部署到 Cloud Run
+  # 步驟 3: 部署到 Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'deploy-cloud-run'
     args:
       - 'run'
       - 'deploy'
       - 'bible-bot'
-      - '--image=gcr.io/bible-bot-project/bible-bot:latest'
+      - '--image=gcr.io/bible-bot-project/bible-bot:$SHORT_SHA'
       - '--platform=managed'
       - '--region=asia-east1'
       - '--allow-unauthenticated'
       - '--quiet'
+      - '--tag=$SHORT_SHA'
+    waitFor: ['push-image']
+  
+  # 步驟 4: 驗證部署（健康檢查）
+  - name: 'gcr.io/cloud-builders/curl'
+    id: 'health-check'
+    args:
+      - '-f'
+      - '-s'
+      - '-o'
+      - '/dev/null'
+      - '-w'
+      - '%{http_code}'
+      - 'https://bible-bot-741437082833.asia-east1.run.app/'
+    waitFor: ['deploy-cloud-run']
 
 images:
+  - 'gcr.io/bible-bot-project/bible-bot:$SHORT_SHA'
   - 'gcr.io/bible-bot-project/bible-bot:latest'
 
+# 替代變數
+substitutions:
+  _SERVICE_NAME: 'bible-bot'
+  _REGION: 'asia-east1'
+
+# 建置選項
 options:
   logging: CLOUD_LOGGING_ONLY
   machineType: 'E2_HIGHCPU_8'
+  # 失敗時記錄詳細資訊
+  logStreamingOption: STREAM_ON
+  # 動態替換
+  substitutionOption: ALLOW_LOOSE
 
+# 逾時設定
 timeout: '1200s'
+
+# 可用變數說明：
+# $PROJECT_ID - GCP 專案 ID
+# $BUILD_ID - 建置 ID
+# $SHORT_SHA - Git commit SHA 前 7 碼
+# $BRANCH_NAME - Git 分支名稱
+# $TAG_NAME - Git 標籤名稱
+# $COMMIT_SHA - 完整 Git commit SHA
