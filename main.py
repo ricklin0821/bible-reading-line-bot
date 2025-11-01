@@ -567,7 +567,15 @@ def handle_message(event):
     report_keywords = ["回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]
     if text in report_keywords:
         # 檢查今天是否已完成測驗
-        if user.last_read_date == datetime.now().date().isoformat():
+        today_str = datetime.now().date().isoformat()
+        # 處理 last_read_date 可能是字串或 date 物件
+        last_read_str = user.last_read_date
+        if isinstance(last_read_str, date):
+            last_read_str = last_read_str.isoformat()
+        elif isinstance(last_read_str, datetime):
+            last_read_str = last_read_str.date().isoformat()
+        
+        if last_read_str == today_str:
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -715,7 +723,15 @@ def handle_message(event):
     # 預設回覆
     default_message_text = "我不太明白您的意思。🤔\n\n發送 '幫助' 查看使用指南，或點擊下方按鈕開始今天的讀經。"
     
-    if user.plan_type and user.quiz_state == "IDLE" and user.last_read_date != datetime.now().date().isoformat():
+    # 處理 last_read_date 的日期比較
+    today_str = datetime.now().date().isoformat()
+    last_read_str = user.last_read_date
+    if isinstance(last_read_str, date):
+        last_read_str = last_read_str.isoformat()
+    elif isinstance(last_read_str, datetime):
+        last_read_str = last_read_str.date().isoformat()
+    
+    if user.plan_type and user.quiz_state == "IDLE" and last_read_str != today_str:
          readings = get_current_reading_plan(user)
          plan_message = get_reading_plan_message(user, readings) 
          messaging_api.reply_message(
@@ -770,10 +786,18 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
     pushed_count = 0
     
     for user in users:
-        # 修正: 確保日期比較正確（處理 datetime 與 date 的差異）
+        # 修正: 確保日期比較正確（處理 datetime、date 與字串的差異）
         today = datetime.now().date()
         last_read = user.last_read_date
-        if isinstance(last_read, datetime):
+        
+        # 處理不同的日期格式
+        if isinstance(last_read, str):
+            # 如果是字串格式 "2025-11-01"，轉換為 date 物件
+            try:
+                last_read = datetime.strptime(last_read, "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                last_read = date(1970, 1, 1)
+        elif isinstance(last_read, datetime):
             last_read = last_read.date()
         elif last_read is None:
             last_read = date(1970, 1, 1) # 設置一個很早的日期，確保第一次使用時不會被誤判為已完成
@@ -791,11 +815,18 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
             yesterday = datetime.now().date() - timedelta(days=1)
             
             # 確保 last_read_date 是 date 物件
-            last_read = user.last_read_date
-            if isinstance(last_read, datetime):
-                last_read = last_read.date()
+            last_read_check = user.last_read_date
+            if isinstance(last_read_check, str):
+                try:
+                    last_read_check = datetime.strptime(last_read_check, "%Y-%m-%d").date()
+                except (ValueError, TypeError):
+                    last_read_check = date(1970, 1, 1)
+            elif isinstance(last_read_check, datetime):
+                last_read_check = last_read_check.date()
+            elif last_read_check is None:
+                last_read_check = date(1970, 1, 1)
                 
-            if last_read == yesterday:
+            if last_read_check == yesterday:
                  user.current_day += 1
                  user.save()
             
