@@ -88,7 +88,7 @@ class User:
         user_data = {
             'line_user_id': line_user_id,
             'plan_type': plan_type,
-            'start_date': date.today(),
+            'start_date': datetime.now(),  # 使用 datetime 而非 date
             'current_day': 1,
             'last_read_date': None,
             'quiz_state': 'IDLE',

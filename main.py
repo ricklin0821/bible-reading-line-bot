@@ -521,7 +521,7 @@ def handle_message(event):
         
         if selected_plan:
             user.plan_type = selected_plan
-            user.start_date = date.today()
+            user.start_date = datetime.now()
             user.current_day = 1
             user.save()
             
@@ -567,7 +567,7 @@ def handle_message(event):
     report_keywords = ["回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]
     if text in report_keywords:
         # 檢查今天是否已完成測驗
-        if user.last_read_date == date.today().isoformat():
+        if user.last_read_date == datetime.now().date().isoformat():
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -634,7 +634,7 @@ def handle_message(event):
         # 檢查是否完成測驗
         if user.quiz_state == "QUIZ_COMPLETED":
             print(f"[DEBUG] Quiz completed for user {line_user_id}")
-            user.last_read_date = date.today().isoformat()  # 轉換為字串以支援 Firestore
+            user.last_read_date = datetime.now().date().isoformat()  # 轉換為字串以支援 Firestore
             user.current_day += 1 
             print(f"[DEBUG] Updated current_day to {user.current_day}")
             user.quiz_state = "IDLE"
@@ -715,7 +715,7 @@ def handle_message(event):
     # 預設回覆
     default_message_text = "我不太明白您的意思。🤔\n\n發送 '幫助' 查看使用指南，或點擊下方按鈕開始今天的讀經。"
     
-    if user.plan_type and user.quiz_state == "IDLE" and user.last_read_date != date.today().isoformat():
+    if user.plan_type and user.quiz_state == "IDLE" and user.last_read_date != datetime.now().date().isoformat():
          readings = get_current_reading_plan(user)
          plan_message = get_reading_plan_message(user, readings) 
          messaging_api.reply_message(
@@ -771,7 +771,7 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
     
     for user in users:
         # 修正: 確保日期比較正確（處理 datetime 與 date 的差異）
-        today = date.today()
+        today = datetime.now().date()
         last_read = user.last_read_date
         if isinstance(last_read, datetime):
             last_read = last_read.date()
@@ -788,7 +788,7 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
             # 如果昨天已完成 (last_read_date == yesterday)，則將 current_day + 1。
             # 如果 last_read_date < yesterday (或 None)，則保持 current_day 不變，
             # 因為使用者已經落後，不應該自動跳過進度。
-            yesterday = date.today() - timedelta(days=1)
+            yesterday = datetime.now().date() - timedelta(days=1)
             
             # 確保 last_read_date 是 date 物件
             last_read = user.last_read_date
