@@ -207,9 +207,9 @@ def generate_quiz_for_user(user: User) -> Tuple[Dict[str, Any], TextMessage]:
     # 5. 準備第一道題目的訊息
     first_question = quiz_data["questions"][0]
     message_text = (
-        f"第 1 題 (共 3 題) - 經文：{first_question['ref']}\n\n"
+        f"📝 第 1 題 (共 3 題)\n📖 經文：{first_question['ref']}\n\n"
         f"{first_question['quiz_text']}\n\n"
-        "請輸入您認為正確的答案 (詞彙)。"
+        "💡 請輸入您認為正確的答案："
     )
     first_question_message = TextMessage(text=message_text)
     
@@ -272,15 +272,15 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
             next_index = quiz_data["current_question_index"]
             next_question = quiz_data["questions"][next_index]
             message_text = (
-                f"第 {next_index + 1} 題 (共 {len(quiz_data['questions'])} 題) - 經文：{next_question['ref']}\n\n"
+                f"📝 第 {next_index + 1} 題 (共 {len(quiz_data['questions'])} 題)\n📖 經文：{next_question['ref']}\n\n"
                 f"{next_question['quiz_text']}\n\n"
-                "請輸入您認為正確的答案 (詞彙)。"
+                "💡 請輸入您認為正確的答案："
             )
             reply_messages.append(TextMessage(text=message_text))
         else:
             # 測驗完成
             user['quiz_state'] = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
-            reply_messages.append(TextMessage(text="所有題目都答對了！您真是太棒了！"))
+            reply_messages.append(TextMessage(text="🎉 所有題目都答對了！\n\n👏 您真是太棒了！神的話語已經深深刻在您心裡！"))
             
     else:
         # 答錯
@@ -289,10 +289,10 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
         if question["attempts"] == 1:
             # 第一次答錯：回應填充題的經文，再次詢問答案
             message_text = (
-                f"再想想看嗎！😊\n\n"
-                f"這節經文是：{question['full_verse']}\n\n"
-                f"請問：{question['quiz_text']}\n\n"
-                "請再次輸入您的答案。"
+                f"🤔 再想想看嗎！\n\n"
+                f"📖 這節經文是：{question['full_verse']}\n\n"
+                f"❓ 請問：{question['quiz_text']}\n\n"
+                "💡 請再次輸入您的答案："
             )
             reply_messages.append(TextMessage(text=message_text))
             # 更新 quiz_data，確保 attempts 被儲存
@@ -301,9 +301,10 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
         elif question["attempts"] == 2:
             # 第二次答錯：出示答案，並給予鼓勵
             message_text = (
-                f"沒關係，再接再勵！💪\n\n"
-                f"正確答案是：**{correct_answer}**\n\n"
-                f"完整的經文是：{question['full_verse']}\n\n"
+                f"😊 沒關係，再接再勵！\n\n"
+                f"✅ 正確答案是：{correct_answer}\n\n"
+                f"📖 完整的經文是：{question['full_verse']}\n\n"
+                f"💪 讓我們繼續加油！"
             )
             reply_messages.append(TextMessage(text=message_text))
             
@@ -317,16 +318,15 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
                 next_index = quiz_data["current_question_index"]
                 next_question = quiz_data["questions"][next_index]
                 message_text = (
-                    f"讓我們繼續下一題吧！\n\n"
-                    f"第 {next_index + 1} 題 (共 {len(quiz_data['questions'])} 題) - 經文：{next_question['ref']}\n\n"
+                    f"\n📝 第 {next_index + 1} 題 (共 {len(quiz_data['questions'])} 題)\n📖 經文：{next_question['ref']}\n\n"
                     f"{next_question['quiz_text']}\n\n"
-                    "請輸入您認為正確的答案 (詞彙)。"
+                    "💡 請輸入您認為正確的答案："
                 )
                 reply_messages.append(TextMessage(text=message_text))
             else:
                 # 測驗完成 (雖然有錯，但題目已結束)
                 user['quiz_state'] = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
-                reply_messages.append(TextMessage(text="今天的測驗結束了！無論結果如何，您願意花時間讀經和學習，就是最棒的！願神祝福您！"))
+                reply_messages.append(TextMessage(text="🌟 今天的測驗結束了！\n\n🙏 無論結果如何，您願意花時間讀經和學習，就是最棒的！\n\n✨ 願神祝福您，明天繼續加油！"))
         
     return reply_messages, user
     

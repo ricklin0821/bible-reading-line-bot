@@ -169,9 +169,10 @@ def parse_readings(readings_str: str) -> list[dict]:
         if chapter_for_url_match:
             chapter_for_url = chapter_for_url_match.group(1)
             
-        # 使用微讀聖經連結
-        wd_code = current_book_info.get('wd_code', current_book_info['code'].lower())
-        url = f"https://wd.bible/tw/bible/{wd_code}.{chapter_for_url}.cuvmpt"
+        # 使用 Bible Gateway 連結，支援多種聖經 app 和網頁版
+        # 格式：https://www.biblegateway.com/passage/?search=書卷+章節&version=CUVMPT
+        book_name_en = current_book_info.get('english', current_book_info['full'])
+        url = f"https://www.biblegateway.com/passage/?search={book_name_en}+{chapter_for_url}&version=CUVMPT"
         
         parsed_list.append({
             "full_name": current_book_info["full"],
@@ -250,30 +251,16 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
         # 確保 URL 不為空且以 http 或 https 開頭
         url_valid = reading["url"] and reading["url"].strip() and (reading["url"].startswith("http://") or reading["url"].startswith("https://"))
         if url_valid:
-            body_contents.append(FlexBox(
-                layout="horizontal",
-                margin="md",
-                spacing="md",
-                contents=[
-                    FlexText(
-                        text=f"{reading['full_name']} {reading['chapter_display']}",
-                        size="lg",
-                        weight="bold",
-                        color="#111111",
-                        gravity="center",
-                        flex=4
-                    ),
-                    FlexButton(
-                        action=URIAction(
-                            label="閱讀",
-                            uri=reading["url"]
-                        ),
-                        style="link",
-                        height="sm",
-                        gravity="center",
-                        flex=1
-                    )
-                ]
+            # 將整個書卷名稱改為可點擊的按鈕，更明顯且易於點擊
+            body_contents.append(FlexButton(
+                action=URIAction(
+                    label=f"📖 {reading['full_name']} {reading['chapter_display']}",
+                    uri=reading["url"]
+                ),
+                style="primary",
+                color="#667eea",
+                height="md",
+                margin="md"
             ))
         else:
             body_contents.append(FlexText(
@@ -384,12 +371,12 @@ def handle_follow(event):
         import traceback
         traceback.print_exc()
     
-    welcome_message = TextMessage(text="歡迎加入一年讀經計畫！\n\n請先選擇您想進行的讀經計畫：")
+    welcome_message = TextMessage(text="🎉 歡迎加入一年讀經計畫！\n\n🙏 感謝神帶領您來到這裡，讓我們一起透過讀經與神更親近！\n\n📖 請先選擇您想進行的讀經計畫：")
     
     plan_selection_message = TextMessage(
-        text="請選擇您的讀經計畫：\n\n"
-             "1. 按卷順序計畫 (Canonical)：從創世記到啟示錄，一年讀完一遍。\n"
-             "2. 平衡讀經計畫 (Balanced)：每日搭配舊約、新約、詩篇/箴言，一年讀完一遍。",
+        text="🎯 請選擇您的讀經計畫：\n\n"
+             "📘 1. 按卷順序計畫\n從創世記到啟示錄，有系統地一年讀完一遍。\n\n"
+             "⚖️ 2. 平衡讀經計畫\n每日搭配舊約、新約、詩篇/箴言，均衡成長！",
         quick_reply=QuickReply(
             items=[
                 QuickReplyItem(
@@ -579,7 +566,7 @@ def handle_message(event):
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text="您今天已經回報並完成測驗了喔！請明天再回來繼續讀經。")]
+                    messages=[TextMessage(text="🎉 您今天已經完成所有任務了！\n\n🙏 感謝神，您又完成了一天的屬靈功課！\n\n🌟 明天再回來繼續讀經吧！")]
                 )
             )
             return
@@ -593,7 +580,7 @@ def handle_message(event):
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text=f"您還有未完成的測驗！\n\n{current_question['quiz_text']}\n\n請輸入您的答案。")]
+                    messages=[TextMessage(text=f"📝 您還有未完成的測驗！\n\n{current_question['quiz_text']}\n\n💡 請輸入您的答案，繼續加油！")]
                 )
             )
             return
@@ -609,7 +596,7 @@ def handle_message(event):
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text="太棒了！讓我們來進行今天的經文小測驗。"), first_question_message]
+                    messages=[TextMessage(text="🎉 太棒了！您已經完成今天的讀經！\n\n📝 現在讓我們來進行今天的經文小測驗，加深對神話語的記憶！"), first_question_message]
                 )
             )
         except ValueError as e:
@@ -660,13 +647,13 @@ def handle_message(event):
                 next_day_message = get_reading_plan_message(next_day_user, next_day_readings)
                 print(f"[DEBUG] Next day message generated successfully")
                 
-                reply_messages.append(TextMessage(text="恭喜您！今天的讀經與測驗都完成了！\n\n這是您明天的讀經計畫："))
+                reply_messages.append(TextMessage(text="🎉 恭喜您！今天的讀經與測驗都完成了！\n\n👏 您又完成了一天的屬靈功課，感謝神的話語滿足我們的心！\n\n📖 這是您明天的讀經計畫："))
                 reply_messages.append(next_day_message)
             except Exception as e:
                 print(f"[ERROR] Failed to generate next day plan: {e}")
                 import traceback
                 traceback.print_exc()
-                reply_messages.append(TextMessage(text=f"恭喜您！今天的讀經與測驗都完成了！\n\n無法取得明天的讀經計畫，請再次選擇讀經計畫。\n\n錯誤：{str(e)}"))
+                reply_messages.append(TextMessage(text=f"🎉 恭喜您！今天的讀經與測驗都完成了！\n\n👏 您又完成了一天的屬靈功課！\n\n⚠️ 無法取得明天的讀經計畫，請再次選擇讀經計畫。"))
         else:
             user.save() 
             
@@ -687,13 +674,13 @@ def handle_message(event):
     
     if text.lower() in greetings:
         greeting_response = (
-            f"您好！我是聖經讀經助手📚\n\n"
-            f"很高興能陪伴您一起讀經！\n\n"
+            f"👋 您好！我是聖經讀經助手\n\n"
+            f"😊 很高興能陪伴您一起讀經，讓神的話語成為我們生命的力量！\n\n"
         )
         if not user.plan_type:
-            greeting_response += "請選擇您的讀經計畫：\n1️⃣ 按卷順序計畫\n2️⃣ 平衡讀經計畫"
+            greeting_response += "🎯 請選擇您的讀經計畫：\n📘 1. 按卷順序計畫\n⚖️ 2. 平衡讀經計畫"
         else:
-            greeting_response += f"您正在進行「{user.plan_type}」計畫，目前是第 {user.current_day} 天！"
+            greeting_response += f"🎉 您正在進行「{user.plan_type}」計畫，目前是第 {user.current_day} 天！\n\n💪 繼續加油，您做得很棒！"
         
         messaging_api.reply_message(
             ReplyMessageRequest(
@@ -706,11 +693,11 @@ def handle_message(event):
     if any(keyword in text for keyword in help_keywords):
         help_response = (
             "📚 聖經讀經助手使用指南\n\n"
-            "🔹 選擇讀經計畫：發送 '1' 或 '2'\n"
-            "🔹 回報完成讀經：點擊「✅ 回報已完成讀經」按鈕\n"
-            "🔹 進行經文測驗：完成讀經後自動開始\n"
-            "🔹 聯繫作者：點擊「✉️ 聯繫作者」按鈕\n\n"
-            "願神的話語常在您心裡！🙏"
+            "🎯 選擇讀經計畫：發送 '1' 或 '2'\n"
+            "✅ 回報完成讀經：點擊「✅ 回報已完成讀經」按鈕\n"
+            "📝 進行經文測驗：完成讀經後自動開始\n"
+            "✉️ 聯繫作者：點擊「✉️ 聯繫作者」按鈕\n\n"
+            "🙏 願神的話語常在您心裡，成為您腳前的燈、路上的光！"
         )
         messaging_api.reply_message(
             ReplyMessageRequest(
@@ -835,14 +822,12 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
                 user.current_day = 365
                 user.save()
             
-            # 修正邏輯：只有當使用者今天還沒有完成讀經時，才推送今日計畫。
-            # 這樣可以避免重複推送，並且確保使用者收到的是當前的計畫。
-            if not is_completed:
-                readings = get_current_reading_plan(user)
-                
-                message = get_reading_plan_message(user, readings) 
-                send_message(user.line_user_id, [message], messaging_api)
-                pushed_count += 1
+            # 修正邏輯：早上總是推送今日計畫，不管昨天是否完成。
+            # 這樣確保使用者每天早上都會收到新的讀經計畫。
+            readings = get_current_reading_plan(user)
+            message = get_reading_plan_message(user, readings) 
+            send_message(user.line_user_id, [message], messaging_api)
+            pushed_count += 1
         
         # ------------------------------------------------------------------
         # 2. 中午/傍晚/晚上 (noon, evening, night): 提醒邏輯
