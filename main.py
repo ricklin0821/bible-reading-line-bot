@@ -795,27 +795,10 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
         # 1. 早上 6 點 (morning): 推送當天計畫
         # ------------------------------------------------------------------
         if push_time == 'morning':
-            # 修正邏輯：在早上推送時，檢查使用者是否已完成昨天的讀經。
-            # 如果昨天已完成 (last_read_date == yesterday)，則將 current_day + 1。
-            # 如果 last_read_date < yesterday (或 None)，則保持 current_day 不變，
-            # 因為使用者已經落後，不應該自動跳過進度。
-            yesterday = datetime.now().date() - timedelta(days=1)
-            
-            # 確保 last_read_date 是 date 物件
-            last_read_check = user.last_read_date
-            if isinstance(last_read_check, str):
-                try:
-                    last_read_check = datetime.strptime(last_read_check, "%Y-%m-%d").date()
-                except (ValueError, TypeError):
-                    last_read_check = date(1970, 1, 1)
-            elif isinstance(last_read_check, datetime):
-                last_read_check = last_read_check.date()
-            elif last_read_check is None:
-                last_read_check = date(1970, 1, 1)
-                
-            if last_read_check == yesterday:
-                 user.current_day += 1
-                 user.save()
+            # 修正邏輯：早上不推進 current_day，因為在完成測驗時已經推進了。
+            # 這樣確保：
+            # 1. 如果使用者昨天完成讀經，今天早上會推送下一天的計畫（current_day 已在測驗完成時 +1）
+            # 2. 如果使用者昨天沒完成，今天早上會繼續推送昨天的計畫（current_day 保持不變）
             
             # 確保使用者不會超前 (current_day 最大為 365)
             if user.current_day > 365:
