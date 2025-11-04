@@ -21,10 +21,13 @@ from database import db, USERS_COLLECTION, BIBLE_PLANS_COLLECTION
 router = APIRouter(prefix="/admin", tags=["admin"])
 security = HTTPBasic()
 
-# 簡單的密碼保護（建議在環境變數中設定）
+# 管理員帳號密碼必須從環境變數設定，不提供預設值以確保安全
 import os
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "bible2025")
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+
+if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+    raise ValueError("⚠️ SECURITY: ADMIN_USERNAME and ADMIN_PASSWORD must be set in environment variables. Do not use default values!")
 
 def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
     """驗證管理員身份"""

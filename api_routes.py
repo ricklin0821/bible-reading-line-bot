@@ -208,10 +208,15 @@ def clear_cache(secret: str):
     清除所有 API 快取。
     
     Args:
-        secret: 管理員密鑰
+        secret: 管理員密鑰（必須從環境變數 CACHE_CLEAR_SECRET 設定）
     """
-    # 簡單的密鑰驗證
-    if secret != "bible2025_clear_cache":
+    import os
+    CACHE_CLEAR_SECRET = os.environ.get("CACHE_CLEAR_SECRET")
+    
+    if not CACHE_CLEAR_SECRET:
+        raise HTTPException(status_code=500, detail="CACHE_CLEAR_SECRET not configured")
+    
+    if secret != CACHE_CLEAR_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden")
     
     _cache.clear()
