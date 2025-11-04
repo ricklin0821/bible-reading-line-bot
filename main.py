@@ -636,8 +636,19 @@ def handle_message(event):
             user.quiz_data = "{}"
             user.save()
             print(f"[DEBUG] User data saved")
+        else:
+            user.save() 
             
-            # 使用 push message 發送下一天的讀經計畫（避免 reply 訊息數量限制）
+        # 先發送 reply_message（確保使用者收到測驗結果）
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=reply_messages
+            )
+        )
+        
+        # 如果測驗完成，使用 push message 發送下一天的讀經計畫
+        if user.quiz_state == "IDLE" and user.last_read_date == datetime.now().date().isoformat():
             try:
                 next_day_user = User.get_by_line_user_id(line_user_id)
                 print(f"[DEBUG] Retrieved next_day_user: current_day={next_day_user.current_day}")
@@ -663,17 +674,7 @@ def handle_message(event):
                 print(f"[ERROR] Failed to push next day plan: {e}")
                 import traceback
                 traceback.print_exc()
-                # 如果推送失敗，在 reply 中告知使用者
-                reply_messages.append(TextMessage(text="⚠️ 無法取得明天的讀經計畫，請稍後再試或重新選擇讀經計畫。"))
-        else:
-            user.save() 
-            
-        messaging_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=reply_messages
-            )
-        )
+        
         return
 
     # --- 預設回覆 ---
