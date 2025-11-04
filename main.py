@@ -282,6 +282,38 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
     ))
     
     # 4. 組裝 Flex Message
+    # 準備 footer 按鈕
+    footer_buttons = [
+        FlexButton(
+            action=MessageAction(
+                label="✅ 回報已完成讀經",
+                text="回報已完成讀經"
+            ),
+            style="primary",
+            color="#0066cc",
+            height="md"
+        )
+    ]
+    
+    # 只有當 readings 不為空時才添加分享按鈕
+    if readings and readings.strip():
+        try:
+            share_uri = f"https://line.me/R/share?text={quote(share_text)}"
+            # 驗證 URI 長度（LINE 限制為 1000 字元）
+            if len(share_uri) < 1000:
+                footer_buttons.append(
+                    FlexButton(
+                        action=URIAction(
+                            label="📤 分享經文",
+                            uri=share_uri
+                        ),
+                        style="link",
+                        height="sm"
+                    )
+                )
+        except Exception as e:
+            print(f"[WARNING] Failed to create share button: {e}")
+    
     bubble = FlexBubble(
         header=FlexBox(
             layout="vertical",
@@ -304,25 +336,7 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
         footer=FlexBox(
             layout="vertical",
             spacing="sm",
-            contents=[
-                FlexButton(
-                    action=MessageAction(
-                        label="✅ 回報已完成讀經",
-                        text="回報已完成讀經"
-                    ),
-                    style="primary",
-                    color="#0066cc",
-                    height="md"
-                ),
-                FlexButton(
-                    action=URIAction(
-                        label="📤 分享經文",
-                        uri=f"https://line.me/R/share?text={quote(share_text)}"
-                    ),
-                    style="link",
-                    height="sm"
-                )
-            ],
+            contents=footer_buttons,
             paddingAll="md"
         )
     )
