@@ -169,13 +169,14 @@ def parse_readings(readings_str: str) -> list[dict]:
         if chapter_for_url_match:
             chapter_for_url = chapter_for_url_match.group(1)
             
-        # 使用 Bible Gateway 連結，支援多種聖經 app 和網頁版
-        # 格式：https://www.biblegateway.com/passage/?search=書卷+章節&version=CUVMPT
-        book_name_en = current_book_info.get('english', current_book_info['full'])
-        # URL 編碼書卷名稱和章節
-        from urllib.parse import quote
-        encoded_book = quote(book_name_en)
-        url = f"https://www.biblegateway.com/passage/?search={encoded_book}+{chapter_for_url}&version=CUVMPT"
+        # 使用微讀聖經 (wd.bible) 連結
+        # 格式：https://wd.bible/tw/bible/{wd_code}.{chapter}.cuvmpt
+        wd_code = current_book_info.get('wd_code', '')
+        if wd_code:
+            url = f"https://wd.bible/tw/bible/{wd_code}.{chapter_for_url}.cuvmpt"
+        else:
+            # 如果沒有 wd_code，使用 None
+            url = None
         
         parsed_list.append({
             "full_name": current_book_info["full"],
