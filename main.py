@@ -172,7 +172,10 @@ def parse_readings(readings_str: str) -> list[dict]:
         # 使用 Bible Gateway 連結，支援多種聖經 app 和網頁版
         # 格式：https://www.biblegateway.com/passage/?search=書卷+章節&version=CUVMPT
         book_name_en = current_book_info.get('english', current_book_info['full'])
-        url = f"https://www.biblegateway.com/passage/?search={book_name_en}+{chapter_for_url}&version=CUVMPT"
+        # URL 編碼書卷名稱和章節
+        from urllib.parse import quote
+        encoded_book = quote(book_name_en)
+        url = f"https://www.biblegateway.com/passage/?search={encoded_book}+{chapter_for_url}&version=CUVMPT"
         
         parsed_list.append({
             "full_name": current_book_info["full"],
