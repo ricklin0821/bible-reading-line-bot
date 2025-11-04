@@ -637,6 +637,7 @@ def handle_message(event):
             user.save()
             print(f"[DEBUG] User data saved")
             
+            # 使用 push message 發送下一天的讀經計畫（避免 reply 訊息數量限制）
             try:
                 next_day_user = User.get_by_line_user_id(line_user_id)
                 print(f"[DEBUG] Retrieved next_day_user: current_day={next_day_user.current_day}")
@@ -647,13 +648,23 @@ def handle_message(event):
                 next_day_message = get_reading_plan_message(next_day_user, next_day_readings)
                 print(f"[DEBUG] Next day message generated successfully")
                 
-                reply_messages.append(TextMessage(text="🎉 恭喜您！今天的讀經與測驗都完成了！\n\n👏 您又完成了一天的屬靈功課，感謝神的話語滿足我們的心！\n\n📖 這是您明天的讀經計畫："))
-                reply_messages.append(next_day_message)
+                # 使用 push message 發送下一天計畫
+                messaging_api.push_message(
+                    PushMessageRequest(
+                        to=line_user_id,
+                        messages=[
+                            TextMessage(text="🎉 恭喜您！今天的讀經與測驗都完成了！\n\n👏 您又完成了一天的屬靈功課，感謝神的話語滿足我們的心！\n\n📖 這是您明天的讀經計畫："),
+                            next_day_message
+                        ]
+                    )
+                )
+                print(f"[DEBUG] Next day plan pushed successfully")
             except Exception as e:
-                print(f"[ERROR] Failed to generate next day plan: {e}")
+                print(f"[ERROR] Failed to push next day plan: {e}")
                 import traceback
                 traceback.print_exc()
-                reply_messages.append(TextMessage(text=f"🎉 恭喜您！今天的讀經與測驗都完成了！\n\n👏 您又完成了一天的屬靈功課！\n\n⚠️ 無法取得明天的讀經計畫，請再次選擇讀經計畫。"))
+                # 如果推送失敗，在 reply 中告知使用者
+                reply_messages.append(TextMessage(text="⚠️ 無法取得明天的讀經計畫，請稍後再試或重新選擇讀經計畫。"))
         else:
             user.save() 
             
