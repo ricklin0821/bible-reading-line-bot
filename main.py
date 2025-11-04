@@ -284,11 +284,19 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
 
     body_contents.append(FlexSeparator(margin="xl"))
     body_contents.append(FlexText(
+        text="💡 點擊上方按鈕可直接閱讀經文！",
+        wrap=True,
+        size="sm",
+        color="#667eea",
+        weight="bold",
+        margin="lg"
+    ))
+    body_contents.append(FlexText(
         text="請您在讀完後，點擊下方按鈕來進行今日的經文測驗！",
         wrap=True,
         size="sm",
         color="#555555",
-        margin="lg"
+        margin="md"
     ))
     
     # 4. 組裝 Flex Message
