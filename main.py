@@ -231,10 +231,13 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
     """（已修正） 生成讀經計畫的 FlexMessage，包含大按鈕"""
     plan_name = "按卷順序計畫" if user.plan_type == "Canonical" else "平衡讀經計畫"
     
+    print(f"[DEBUG] get_reading_plan_message called with readings: '{readings}'")
+    
     # 定義分享文字（避免 f-string 中使用反斜線）
     share_text = f"【今日讀經】{readings}\n\n📚 一起加入一年讀經計畫！\n每天讀聖經、做測驗，讓神的話語成為生命的力量。\n\n✨ 搜尋「一年讀經計畫」或請朋友分享 LINE Bot 給你，一起每日讀經！"
     
     parsed_readings = parse_readings(readings)
+    print(f"[DEBUG] Parsed readings: {parsed_readings}")
     body_contents = []
     
     body_contents.append(FlexText(
@@ -250,12 +253,15 @@ def get_reading_plan_message(user: User, readings: str) -> FlexMessage:
             
         # 確保 URL 不為空且以 http 或 https 開頭
         url_valid = reading["url"] and reading["url"].strip() and (reading["url"].startswith("http://") or reading["url"].startswith("https://"))
+        print(f"[DEBUG] Reading {i}: url_valid={url_valid}, url={reading.get('url', 'None')}")
         if url_valid:
             # 將整個書卷名稱改為可點擊的按鈕，更明顯且易於點擊
+            button_uri = reading["url"]
+            print(f"[DEBUG] Creating FlexButton with URI: {button_uri}")
             body_contents.append(FlexButton(
                 action=URIAction(
                     label=f"📖 {reading['full_name']} {reading['chapter_display']}",
-                    uri=reading["url"]
+                    uri=button_uri
                 ),
                 style="primary",
                 color="#667eea",
