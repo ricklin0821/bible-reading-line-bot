@@ -585,31 +585,59 @@ def handle_message(event):
 
     # --- 排行榜查詢指令 ---
     if text in ["排行榜", "🏆 排行榜", "查看排行榜"]:
-        # 顯示本週排行榜
-        leaderboard = get_weekly_leaderboard(limit=10)
-        user_rank = None  # TODO: 實作使用者排名查詢
-        user_score = user.week_score or 0
-        message_text = format_leaderboard_message(leaderboard, "weekly", user_rank, user_score)
-        
-        messaging_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=message_text)]
+        try:
+            print(f"[DEBUG] User requested weekly leaderboard")
+            # 顯示本週排行榜
+            leaderboard = get_weekly_leaderboard(limit=10)
+            print(f"[DEBUG] Got {len(leaderboard)} users in leaderboard")
+            user_rank = None  # TODO: 實作使用者排名查詢
+            user_score = user.week_score or 0
+            message_text = format_leaderboard_message(leaderboard, "weekly", user_rank, user_score)
+            print(f"[DEBUG] Message text length: {len(message_text)}")
+            
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=message_text)]
+                )
             )
-        )
+        except Exception as e:
+            print(f"[ERROR] Failed to get weekly leaderboard: {e}")
+            import traceback
+            traceback.print_exc()
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=f"查詢排行榜時發生錯誤：{str(e)}")]
+                )
+            )
         return
     
     if text in ["連續排行", "🔥 連續排行"]:
-        # 顯示連續天數排行榜
-        leaderboard = get_streak_leaderboard(limit=10)
-        message_text = format_leaderboard_message(leaderboard, "streak")
-        
-        messaging_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=message_text)]
+        try:
+            print(f"[DEBUG] User requested streak leaderboard")
+            # 顯示連續天數排行榜
+            leaderboard = get_streak_leaderboard(limit=10)
+            print(f"[DEBUG] Got {len(leaderboard)} users in streak leaderboard")
+            message_text = format_leaderboard_message(leaderboard, "streak")
+            print(f"[DEBUG] Message text length: {len(message_text)}")
+            
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=message_text)]
+                )
             )
-        )
+        except Exception as e:
+            print(f"[ERROR] Failed to get streak leaderboard: {e}")
+            import traceback
+            traceback.print_exc()
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=f"查詢連續排行時發生錯誤：{str(e)}")]
+                )
+            )
         return
     
     if text in ["我的數據", "📊 我的數據", "個人數據", "統計"]:
