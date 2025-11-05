@@ -84,18 +84,40 @@ class User:
     def create(line_user_id: str, plan_type: str = None) -> UserObject:
         """建立新使用者"""
         users_ref = db.collection(USERS_COLLECTION)
+        now = datetime.now()
+        today_str = now.strftime('%Y-%m-%d')
         
         user_data = {
+            # 原有欄位
             'line_user_id': line_user_id,
             'plan_type': plan_type,
-            'start_date': datetime.now(),  # 使用 datetime 而非 date
+            'start_date': now,
             'current_day': 1,
             'last_read_date': None,
             'quiz_state': 'IDLE',
             'quiz_data': '{}',
             'display_name': None,
             'contact_state': 'IDLE',
-            'contact_email': ''
+            'contact_email': '',
+            
+            # 計分系統欄位
+            'total_score': 0,
+            'week_score': 0,
+            'month_score': 0,
+            'current_streak': 0,
+            'longest_streak': 0,
+            'last_streak_date': None,
+            'total_reading_days': 0,
+            'quiz_perfect_count': 0,
+            'quiz_total_count': 0,
+            'week_reading_days': 0,
+            'badges': [],
+            'milestone_achieved': {},
+            'show_in_leaderboard': True,
+            'display_name_public': None,
+            'joined_date': now,
+            'week_reset_date': today_str,
+            'month_reset_date': today_str
         }
         
         doc_ref = users_ref.document()
