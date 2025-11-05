@@ -218,9 +218,11 @@ def generate_quiz_for_user(user: User) -> Tuple[Dict[str, Any], TextMessage]:
 def process_quiz_answer(user: dict, answer: str) -> tuple:
     """
     處理使用者提交的測驗答案。
-    返回 (reply_messages, updated_user) 元組。
+    返回 (reply_messages, updated_user, quiz_result) 元組。
+    quiz_result: "perfect" (全對), "partial" (部分錯誤), "in_progress" (還在進行中)
     """
     reply_messages = []
+    quiz_result = "in_progress"  # 預設狀態
     
     try:
         quiz_data = json.loads(user['quiz_data'])
@@ -278,8 +280,9 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
             )
             reply_messages.append(TextMessage(text=message_text))
         else:
-            # 測驗完成
-            user['quiz_state'] = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
+            # 測驗完成（全對）
+            user['quiz_state'] = "QUIZ_COMPLETED"
+            quiz_result = "perfect"  # 所有題目都答對
             reply_messages.append(TextMessage(text="🎉 所有題目都答對了！\n\n👏 您真是太棒了！神的話語已經深深刻在您心裡！"))
             
     else:
@@ -324,11 +327,12 @@ def process_quiz_answer(user: dict, answer: str) -> tuple:
                 )
                 reply_messages.append(TextMessage(text=message_text))
             else:
-                # 測驗完成 (雖然有錯，但題目已結束)
-                user['quiz_state'] = "QUIZ_COMPLETED" # 在 main.py 中會處理後續邏輯
+                # 測驗完成（部分錯誤）
+                user['quiz_state'] = "QUIZ_COMPLETED"
+                quiz_result = "partial"  # 有題目答錯
                 reply_messages.append(TextMessage(text="🌟 今天的測驗結束了！\n\n🙏 無論結果如何，您願意花時間讀經和學習，就是最棒的！\n\n✨ 願神祝福您，明天繼續加油！"))
         
-    return reply_messages, user
+    return reply_messages, user, quiz_result
     
 def get_daily_reading_text(readings: str) -> str:
     """

@@ -18,7 +18,9 @@ from linebot.v3.messaging import (
 from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, PostbackEvent
 
 from database import init_db, User, BiblePlan, BibleText
-from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text, get_random_encouraging_verse
+from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text
+from scoring import add_reading_score, format_score_message
+from leaderboard import get_weekly_leaderboard, get_streak_leaderboard, get_newcomer_leaderboard, get_total_leaderboard, format_leaderboard_message, get_user_stats
 from api_routes import router as api_router
 from admin_routes import router as admin_router
 from admin_auth import router as admin_auth_router
@@ -581,6 +583,64 @@ def handle_message(event):
         
         return 
 
+    # --- 排行榜查詢指令 ---
+    if text in ["排行榜", "🏆 排行榜", "查看排行榜"]:
+        # 顯示本週排行榜
+        leaderboard = get_weekly_leaderboard(limit=10)
+        user_rank = None  # TODO: 實作使用者排名查詢
+        user_score = user.week_score or 0
+        message_text = format_leaderboard_message(leaderboard, "weekly", user_rank, user_score)
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    if text in ["連續排行", "🔥 連續排行"]:
+        # 顯示連續天數排行榜
+        leaderboard = get_streak_leaderboard(limit=10)
+        message_text = format_leaderboard_message(leaderboard, "streak")
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    if text in ["我的數據", "📊 我的數據", "個人數據", "統計"]:
+        # 顯示個人統計資料
+        stats = get_user_stats(user)
+        
+        message_text = f"""📊 您的讀經數據
+
+總積分：{stats['total_score']} 分 {stats['stars']}
+本週積分：{stats['week_score']} 分
+
+🔥 連續讀經：{stats['current_streak']} 天
+🏆 最長連續：{stats['longest_streak']} 天
+📚 總讀經天數：{stats['total_reading_days']} 天
+✅ 本週完成：{stats['week_reading_days']} 天
+
+🎯 測驗正確率：{stats['quiz_accuracy']:.1f}%
+⭐ 全對次數：{stats['quiz_perfect_count']} / {stats['quiz_total_count']}
+"""
+        
+        if stats['badges']:
+            message_text += f"\n🏅 已獲得徽章：{''.join(stats['badges'])}"
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
     # --- (修正) 處理「回報讀經」的文字回覆 ---
     # 增加 "✅ 回報已完成讀經" 的選項
     report_keywords = ["回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]
@@ -656,18 +716,35 @@ def handle_message(event):
 
     # --- 處理測驗答案 ---
     if user.quiz_state == "WAITING_ANSWER":
-        reply_messages, user = process_quiz_answer(user, text)
+        reply_messages, user, quiz_result = process_quiz_answer(user, text)
         
         # 檢查是否完成測驗
         if user.quiz_state == "QUIZ_COMPLETED":
             print(f"[DEBUG] Quiz completed for user {line_user_id}")
-            user.last_read_date = datetime.now().date().isoformat()  # 轉換為字串以支援 Firestore
+            
+            # 計分系統：添加讀經分數
+            today_str = datetime.now().date().isoformat()
+            scoring_result = add_reading_score(
+                user=user,
+                reading_date=today_str,
+                is_makeup=False,
+                days_ago=0,
+                quiz_result=quiz_result  # "perfect" 或 "partial"
+            )
+            print(f"[DEBUG] Scoring result: {scoring_result}")
+            
+            # 更新讀經狀態
+            user.last_read_date = today_str
             user.current_day += 1 
             print(f"[DEBUG] Updated current_day to {user.current_day}")
             user.quiz_state = "IDLE"
             user.quiz_data = "{}"
             user.save()
             print(f"[DEBUG] User data saved")
+            
+            # 將計分結果加入回覆訊息
+            score_message = format_score_message(scoring_result)
+            reply_messages.append(TextMessage(text=score_message))
         else:
             user.save() 
             
