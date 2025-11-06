@@ -79,25 +79,8 @@ def get_daily_verse(user: User) -> Optional[Dict]:
     if current_day in FEATURED_VERSES:
         return FEATURED_VERSES[current_day]
     
-    # 如果沒有精選金句，從讀經計畫中獲取第一段經文
-    try:
-        plan = BiblePlan.get_by_day(user.plan_type, current_day)
-        if plan and plan.get('readings'):
-            first_reading = plan['readings'][0]
-            
-            # 構建金句（使用讀經範圍的第一節）
-            book = first_reading.get('book', '')
-            chapter = first_reading.get('chapter', 1)
-            
-            return {
-                "text": f"今天的讀經範圍：{book} {chapter} 章",
-                "reference": f"{book} {chapter}",
-                "book": book,
-                "chapter": chapter,
-                "verse": 1
-            }
-    except Exception as e:
-        print(f"Error getting daily verse: {e}")
+    # 如果沒有精選金句，返回預設金句（避免從讀經計畫中獲取，因為可能會導致錯誤）
+    # 直接返回預設金句
     
     # 如果都失敗，返回預設金句
     return {
@@ -133,8 +116,10 @@ def get_daily_verse_message(user: User) -> FlexMessage:
     current_day = user.current_day or 1
     today = datetime.now().strftime("%Y/%m/%d")
     
-    # 構建 Bible Gateway 連結
-    bible_url = f"https://www.biblegateway.com/passage/?search={verse['reference']}&version=CUVMPT"
+    # 構建 Bible Gateway 連結（使用 quote 編碼中文）
+    from urllib.parse import quote
+    reference_encoded = quote(verse['reference'])
+    bible_url = f"https://www.biblegateway.com/passage/?search={reference_encoded}&version=CUVMPT"
     
     bubble = FlexBubble(
         size="mega",
