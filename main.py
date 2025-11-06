@@ -687,6 +687,20 @@ def handle_message(event):
         )
         return
     
+    # --- 每日金句指令 ---
+    if text in ["每日金句", "📖 每日金句", "今日金句", "金句"]:
+        from daily_verse import get_daily_verse_message
+        
+        verse_message = get_daily_verse_message(user)
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[verse_message]
+            )
+        )
+        return
+    
     # --- (修正) 處理「回報讀經」的文字回覆 ---
     # 增加 "✅ 回報已完成讀經" 的選項
     report_keywords = ["回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]
