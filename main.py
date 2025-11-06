@@ -1024,10 +1024,10 @@ async def api_weekly_leaderboard():
             "title": "本週排行榜",
             "rankings": [
                 {
-                    "display_name": user.display_name,
-                    "week_score": user.week_score,
-                    "week_reading_days": user.week_reading_days,
-                    "star_level": user.star_level or "⭐ 初學者"
+                    "display_name": user['display_name'],
+                    "week_score": user['week_score'],
+                    "week_reading_days": user['week_reading_days'],
+                    "star_level": f"{user['stars']} {user['star_title']}"
                 }
                 for user in rankings
             ]
@@ -1047,10 +1047,10 @@ async def api_streak_leaderboard():
             "title": "連續天數排行榜",
             "rankings": [
                 {
-                    "display_name": user.display_name,
-                    "current_streak": user.current_streak,
-                    "total_score": user.total_score,
-                    "star_level": user.star_level or "⭐ 初學者"
+                    "display_name": user['display_name'],
+                    "current_streak": user['current_streak'],
+                    "total_score": user['total_score'],
+                    "star_level": f"{user['stars']} {user['star_title']}"
                 }
                 for user in rankings
             ]
@@ -1070,11 +1070,11 @@ async def api_total_leaderboard():
             "title": "總積分排行榜",
             "rankings": [
                 {
-                    "display_name": user.display_name,
-                    "total_score": user.total_score,
-                    "total_reading_days": user.total_reading_days,
-                    "current_streak": user.current_streak,
-                    "star_level": user.star_level or "⭐ 初學者"
+                    "display_name": user['display_name'],
+                    "total_score": user['total_score'],
+                    "total_reading_days": user['total_reading_days'],
+                    "current_streak": user['current_streak'],
+                    "star_level": f"{user['stars']} {user['star_title']}"
                 }
                 for user in rankings
             ]
