@@ -590,7 +590,8 @@ def handle_message(event):
             # 顯示本週排行榜
             leaderboard = get_weekly_leaderboard(limit=10)
             print(f"[DEBUG] Got {len(leaderboard)} users in leaderboard")
-            user_rank = None  # TODO: 實作使用者排名查詢
+            from scoring import get_user_rank
+            user_rank = get_user_rank(user, "weekly")
             user_score = user.week_score or 0
             message_text = format_leaderboard_message(leaderboard, "weekly", user_rank, user_score)
             print(f"[DEBUG] Message text length: {len(message_text)}")
@@ -619,7 +620,10 @@ def handle_message(event):
             # 顯示連續天數排行榜
             leaderboard = get_streak_leaderboard(limit=10)
             print(f"[DEBUG] Got {len(leaderboard)} users in streak leaderboard")
-            message_text = format_leaderboard_message(leaderboard, "streak")
+            from scoring import get_user_rank
+            user_rank = get_user_rank(user, "streak")
+            user_score = user.current_streak or 0
+            message_text = format_leaderboard_message(leaderboard, "streak", user_rank, user_score)
             print(f"[DEBUG] Message text length: {len(message_text)}")
             
             messaging_api.reply_message(
