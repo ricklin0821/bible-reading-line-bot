@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>即時排行榜 - 讀經打卡 LINE Bot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9ff;
+            border-bottom: 2px solid #e0e0e0;
+            overflow-x: auto;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            min-width: 150px;
+        }
+
+        .tab:hover {
+            background: #fff;
+            color: #667eea;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .leaderboard-title {
+            font-size: 1.8em;
+            color: #667eea;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .last-update {
+            color: #999;
+            font-size: 0.9em;
+            text-align: right;
+            margin-top: 10px;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .leaderboard-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .leaderboard-table th {
+            padding: 18px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .leaderboard-table td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .leaderboard-table tr:hover {
+            background: #f8f9ff;
+        }
+
+        .rank {
+            font-weight: 700;
+            font-size: 1.2em;
+            width: 60px;
+            text-align: center;
+        }
+
+        .rank-1 { color: #FFD700; }
+        .rank-2 { color: #C0C0C0; }
+        .rank-3 { color: #CD7F32; }
+
+        .rank-medal {
+            font-size: 1.5em;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .star-level {
+            display: inline-block;
+            background: linear-gradient(135deg, #fff9e6 0%, #ffe6b3 100%);
+            color: #f57c00;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            margin-left: 10px;
+            font-weight: 600;
+        }
+
+        .score {
+            font-weight: 700;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+
+        .streak {
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+            font-size: 1.1em;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+
+        .info-box h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            color: #555;
+            line-height: 1.8;
+        }
+
+        footer {
+            background: #f8f9ff;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+        }
+
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            .content {
+                padding: 30px 15px;
+            }
+
+            .leaderboard-title {
+                font-size: 1.5em;
+            }
+
+            .leaderboard-table {
+                font-size: 0.9em;
+            }
+
+            .leaderboard-table th,
+            .leaderboard-table td {
+                padding: 12px 8px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab {
+                border-bottom: 1px solid #e0e0e0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 即時排行榜</h1>
+            <p>與弟兄姊妹一起堅持讀經，共同成長！</p>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="weekly">📅 本週排行</div>
+            <div class="tab" data-tab="streak">🔥 連續天數</div>
+            <div class="tab" data-tab="total">👑 總積分</div>
+        </div>
+
+        <div class="content">
+            <!-- 本週排行榜 -->
+            <div id="weekly" class="tab-content active">
+                <div class="leaderboard-header">
+                    <h2 class="leaderboard-title">📅 本週排行榜</h2>
+                    <button class="refresh-btn" onclick="loadLeaderboard('weekly')">🔄 重新整理</button>
+                </div>
+                <div id="weekly-content">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>載入中...</p>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <h3>📊 本週排行說明</h3>
+                    <p>顯示本週（週一至週日）積分最高的前 10 名使用者。每週一重新計算，讓每個人都有機會登上榜首！</p>
+                </div>
+            </div>
+
+            <!-- 連續天數排行榜 -->
+            <div id="streak" class="tab-content">
+                <div class="leaderboard-header">
+                    <h2 class="leaderboard-title">🔥 連續天數排行榜</h2>
+                    <button class="refresh-btn" onclick="loadLeaderboard('streak')">🔄 重新整理</button>
+                </div>
+                <div id="streak-content">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>載入中...</p>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <h3>🔥 連續天數說明</h3>
+                    <p>顯示目前連續讀經天數最多的前 10 名使用者。堅持每天讀經，不僅能獲得額外加成，還能在這個榜單上名列前茅！</p>
+                </div>
+            </div>
+
+            <!-- 總積分排行榜 -->
+            <div id="total" class="tab-content">
+                <div class="leaderboard-header">
+                    <h2 class="leaderboard-title">👑 總積分排行榜</h2>
+                    <button class="refresh-btn" onclick="loadLeaderboard('total')">🔄 重新整理</button>
+                </div>
+                <div id="total-content">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>載入中...</p>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <h3>👑 總積分說明</h3>
+                    <p>顯示累計總積分最高的前 20 名使用者。這是長期堅持讀經的見證，展現了持之以恆的信心！</p>
+                </div>
+            </div>
+
+            <div class="last-update" id="last-update"></div>
+        </div>
+
+        <footer>
+            <p>© 2025 讀經打卡 LINE Bot</p>
+            <p>
+                <a href="/static/index.html">首頁</a> |
+                <a href="/static/scoring-system.html">計分系統說明</a> |
+                <a href="/static/about.html">關於我們</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Tab 切換功能
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                
+                // 移除所有 active class
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // 添加 active class
+                tab.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+                
+                // 載入對應的排行榜
+                loadLeaderboard(tabName);
+            });
+        });
+
+        // 載入排行榜數據
+        async function loadLeaderboard(type) {
+            const contentId = `${type}-content`;
+            const contentDiv = document.getElementById(contentId);
+            
+            // 顯示載入中
+            contentDiv.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>載入中...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`/api/leaderboard/${type}`);
+                
+                if (!response.ok) {
+                    throw new Error('無法載入排行榜數據');
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                renderLeaderboard(type, data, contentDiv);
+                updateLastUpdateTime();
+                
+            } catch (error) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ 載入失敗</h3>
+                        <p>${error.message}</p>
+                        <button class="refresh-btn" onclick="loadLeaderboard('${type}')" style="margin-top: 15px;">
+                            重試
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // 渲染排行榜
+        function renderLeaderboard(type, data, contentDiv) {
+            if (!data.rankings || data.rankings.length === 0) {
+                contentDiv.innerHTML = `
+                    <div class="empty">
+                        <p>📭 目前還沒有排行榜數據</p>
+                        <p style="margin-top: 10px; font-size: 0.9em;">開始讀經打卡，成為第一名吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHTML = '<table class="leaderboard-table"><thead><tr>';
+            tableHTML += '<th class="rank">排名</th>';
+            tableHTML += '<th>使用者</th>';
+            
+            if (type === 'weekly') {
+                tableHTML += '<th>本週積分</th>';
+                tableHTML += '<th>本週讀經</th>';
+            } else if (type === 'streak') {
+                tableHTML += '<th>連續天數</th>';
+                tableHTML += '<th>總積分</th>';
+            } else if (type === 'total') {
+                tableHTML += '<th>總積分</th>';
+                tableHTML += '<th>總讀經天數</th>';
+                tableHTML += '<th>連續天數</th>';
+            }
+            
+            tableHTML += '</tr></thead><tbody>';
+
+            data.rankings.forEach((user, index) => {
+                const rank = index + 1;
+                let rankDisplay = rank;
+                let rankClass = '';
+                
+                if (rank === 1) {
+                    rankDisplay = '🥇';
+                    rankClass = 'rank-1';
+                } else if (rank === 2) {
+                    rankDisplay = '🥈';
+                    rankClass = 'rank-2';
+                } else if (rank === 3) {
+                    rankDisplay = '🥉';
+                    rankClass = 'rank-3';
+                }
+
+                tableHTML += '<tr>';
+                tableHTML += `<td class="rank ${rankClass}">${rankDisplay}</td>`;
+                tableHTML += `<td class="user-name">${escapeHtml(user.display_name)}`;
+                
+                if (user.star_level) {
+                    tableHTML += `<span class="star-level">${user.star_level}</span>`;
+                }
+                
+                tableHTML += '</td>';
+                
+                if (type === 'weekly') {
+                    tableHTML += `<td class="score">${user.week_score} 分</td>`;
+                    tableHTML += `<td>${user.week_reading_days} 天</td>`;
+                } else if (type === 'streak') {
+                    tableHTML += `<td class="streak">🔥 ${user.current_streak} 天</td>`;
+                    tableHTML += `<td class="score">${user.total_score} 分</td>`;
+                } else if (type === 'total') {
+                    tableHTML += `<td class="score">${user.total_score} 分</td>`;
+                    tableHTML += `<td>${user.total_reading_days} 天</td>`;
+                    tableHTML += `<td class="streak">🔥 ${user.current_streak} 天</td>`;
+                }
+                
+                tableHTML += '</tr>';
+            });
+
+            tableHTML += '</tbody></table>';
+            contentDiv.innerHTML = tableHTML;
+        }
+
+        // 更新最後更新時間
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('last-update').textContent = `最後更新：${timeString}`;
+        }
+
+        // HTML 轉義
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 頁面載入時自動載入本週排行榜
+        window.addEventListener('load', () => {
+            loadLeaderboard('weekly');
+        });
+
+        // 每 30 秒自動重新整理當前顯示的排行榜
+        setInterval(() => {
+            const activeTab = document.querySelector('.tab.active');
+            if (activeTab) {
+                const tabName = activeTab.getAttribute('data-tab');
+                loadLeaderboard(tabName);
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

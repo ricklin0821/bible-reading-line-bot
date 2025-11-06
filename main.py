@@ -1009,3 +1009,76 @@ def daily_push(push_time: str, messaging_api: MessagingApi = Depends(get_messagi
 
     return {"status": "success", "push_time": push_time, "pushed_count": pushed_count}
 
+
+# =============================================================================
+# 排行榜 API 端點 (用於網頁顯示)
+# =============================================================================
+
+@app.get("/api/leaderboard/weekly")
+async def api_weekly_leaderboard():
+    """取得本週排行榜數據 (JSON 格式)"""
+    try:
+        rankings = get_weekly_leaderboard(limit=10)
+        return {
+            "type": "weekly",
+            "title": "本週排行榜",
+            "rankings": [
+                {
+                    "display_name": user.display_name,
+                    "week_score": user.week_score,
+                    "week_reading_days": user.week_reading_days,
+                    "star_level": user.star_level or "⭐ 初學者"
+                }
+                for user in rankings
+            ]
+        }
+    except Exception as e:
+        print(f"Error in api_weekly_leaderboard: {e}")
+        return {"error": str(e)}, 500
+
+
+@app.get("/api/leaderboard/streak")
+async def api_streak_leaderboard():
+    """取得連續天數排行榜數據 (JSON 格式)"""
+    try:
+        rankings = get_streak_leaderboard(limit=10)
+        return {
+            "type": "streak",
+            "title": "連續天數排行榜",
+            "rankings": [
+                {
+                    "display_name": user.display_name,
+                    "current_streak": user.current_streak,
+                    "total_score": user.total_score,
+                    "star_level": user.star_level or "⭐ 初學者"
+                }
+                for user in rankings
+            ]
+        }
+    except Exception as e:
+        print(f"Error in api_streak_leaderboard: {e}")
+        return {"error": str(e)}, 500
+
+
+@app.get("/api/leaderboard/total")
+async def api_total_leaderboard():
+    """取得總積分排行榜數據 (JSON 格式)"""
+    try:
+        rankings = get_total_leaderboard(limit=20)
+        return {
+            "type": "total",
+            "title": "總積分排行榜",
+            "rankings": [
+                {
+                    "display_name": user.display_name,
+                    "total_score": user.total_score,
+                    "total_reading_days": user.total_reading_days,
+                    "current_streak": user.current_streak,
+                    "star_level": user.star_level or "⭐ 初學者"
+                }
+                for user in rankings
+            ]
+        }
+    except Exception as e:
+        print(f"Error in api_total_leaderboard: {e}")
+        return {"error": str(e)}, 500
