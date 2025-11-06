@@ -223,7 +223,7 @@ def get_daily_verse_message(user: User) -> FlexMessage:
                     style="link",
                     action=MessageAction(
                         label="開始今日讀經",
-                        text="回報讀經"
+                        text="選單"
                     ),
                     height="sm",
                     margin="sm"
