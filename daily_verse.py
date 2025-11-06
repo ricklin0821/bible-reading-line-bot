@@ -1,125 +1,106 @@
 """
-每日金句模組
-從當天的讀經範圍中選擇一句經文作為每日金句
+每日荒漠甘泉模組
+從本地 JSON 資料庫讀取荒漠甘泉內容
 """
-from typing import Dict, Optional
+
+import json
+import os
 from datetime import datetime
-from linebot.v3.messaging import (
-    FlexMessage, FlexBubble, FlexBox, FlexText, FlexButton,
-    FlexSeparator, MessageAction, URIAction, FlexImage
+from typing import Optional, Dict
+from linebot.models import (
+    FlexMessage, FlexBubble, FlexBox, FlexText, FlexButton, FlexSeparator
 )
-from database import User, BiblePlan
+from linebot.models.actions import MessageAction, URIAction
+from database import User
+
+# 荒漠甘泉資料庫路徑
+STREAMS_DB_PATH = os.path.join(os.path.dirname(__file__), 'streams_in_desert.json')
+
+# 載入荒漠甘泉資料
+_streams_data = None
+
+def load_streams_data():
+    """載入荒漠甘泉資料"""
+    global _streams_data
+    if _streams_data is None:
+        try:
+            with open(STREAMS_DB_PATH, 'r', encoding='utf-8') as f:
+                _streams_data = json.load(f)
+        except Exception as e:
+            print(f"Error loading streams data: {e}")
+            _streams_data = {}
+    return _streams_data
 
 
-# 精選金句列表（按天數對應）
-# 這些是手動選擇的精華經文，優先使用
-FEATURED_VERSES = {
-    1: {
-        "text": "起初，神創造天地。",
-        "reference": "創世記 1:1",
-        "book": "創世記",
-        "chapter": 1,
-        "verse": 1
-    },
-    2: {
-        "text": "神看著一切所造的都甚好。有晚上，有早晨，是第六日。",
-        "reference": "創世記 1:31",
-        "book": "創世記",
-        "chapter": 1,
-        "verse": 31
-    },
-    7: {
-        "text": "耶和華神用地上的塵土造人，將生氣吹在他鼻孔裡，他就成了有靈的活人，名叫亞當。",
-        "reference": "創世記 2:7",
-        "book": "創世記",
-        "chapter": 2,
-        "verse": 7
-    },
-    30: {
-        "text": "你的話是我腳前的燈，是我路上的光。",
-        "reference": "詩篇 119:105",
-        "book": "詩篇",
-        "chapter": 119,
-        "verse": 105
-    },
-    100: {
-        "text": "你們要嘗嘗主恩的滋味，便知道他是美善；投靠他的人有福了！",
-        "reference": "詩篇 34:8",
-        "book": "詩篇",
-        "chapter": 34,
-        "verse": 8
-    },
-    365: {
-        "text": "我靠著那加給我力量的，凡事都能做。",
-        "reference": "腓立比書 4:13",
-        "book": "腓立比書",
-        "chapter": 4,
-        "verse": 13
-    }
-}
-
-
-def get_daily_verse(user: User) -> Optional[Dict]:
+def get_daily_devotional(user: User = None) -> Optional[Dict]:
     """
-    獲取當天的每日金句
+    獲取當天的荒漠甘泉
     
     Args:
-        user: 使用者物件
+        user: 使用者物件（可選，用於判斷當前天數）
     
     Returns:
-        Dict: 金句資訊，包含 text, reference, book, chapter, verse
-        None: 如果無法獲取金句
+        Dict: 荒漠甘泉資訊，包含 verse, verse_ref, content
+        None: 如果無法獲取
     """
-    if not user or not user.plan_type:
-        return None
+    # 獲取今天的日期
+    today = datetime.now()
+    month = today.month
+    day = today.day
     
-    current_day = user.current_day or 1
+    # 如果有使用者，可以根據使用者的當前天數來決定（可選）
+    # 這裡我們使用實際日期
     
-    # 優先使用精選金句
-    if current_day in FEATURED_VERSES:
-        return FEATURED_VERSES[current_day]
+    # 載入資料
+    data = load_streams_data()
     
-    # 如果沒有精選金句，返回預設金句（避免從讀經計畫中獲取，因為可能會導致錯誤）
-    # 直接返回預設金句
+    # 獲取今天的內容
+    key = f"{month:02d}-{day:02d}"
     
-    # 如果都失敗，返回預設金句
+    if key in data:
+        return data[key]
+    
+    # 如果找不到，返回預設內容
     return {
-        "text": "你的話是我腳前的燈，是我路上的光。",
-        "reference": "詩篇 119:105",
-        "book": "詩篇",
-        "chapter": 119,
-        "verse": 105
+        'month': month,
+        'day': day,
+        'verse': '「你的話是我腳前的燈，是我路上的光。」（詩篇 119:105）',
+        'verse_ref': '詩篇 119:105',
+        'content': '神的話語是我們生命中的光，指引我們前行的方向。讓我們每天都親近神的話語，從中得著力量和智慧。'
     }
 
 
-def get_daily_verse_message(user: User) -> FlexMessage:
+def get_daily_devotional_message(user: User) -> FlexMessage:
     """
-    生成每日金句的 Flex Message
+    生成每日荒漠甘泉的 Flex Message
     
     Args:
         user: 使用者物件
     
     Returns:
-        FlexMessage: 每日金句訊息
+        FlexMessage: 荒漠甘泉訊息
     """
-    verse = get_daily_verse(user)
+    devotional = get_daily_devotional(user)
     
-    if not verse:
-        verse = {
-            "text": "你的話是我腳前的燈，是我路上的光。",
-            "reference": "詩篇 119:105",
-            "book": "詩篇",
-            "chapter": 119,
-            "verse": 105
+    if not devotional:
+        devotional = {
+            'month': datetime.now().month,
+            'day': datetime.now().day,
+            'verse': '「你的話是我腳前的燈，是我路上的光。」（詩篇 119:105）',
+            'verse_ref': '詩篇 119:105',
+            'content': '神的話語是我們生命中的光，指引我們前行的方向。'
         }
     
-    current_day = user.current_day or 1
     today = datetime.now().strftime("%Y/%m/%d")
+    month = devotional['month']
+    day = devotional['day']
     
-    # 構建 Bible Gateway 連結（使用 quote 編碼中文）
-    from urllib.parse import quote
-    reference_encoded = quote(verse['reference'])
-    bible_url = f"https://www.biblegateway.com/passage/?search={reference_encoded}&version=CUVMPT"
+    # 清理內容（移除分頁符等特殊字符）
+    content = devotional['content'].replace('\f', '\n').strip()
+    
+    # 限制內容長度（LINE Flex Message 有字數限制）
+    if len(content) > 800:
+        content = content[:800] + '...'
     
     bubble = FlexBubble(
         size="mega",
@@ -127,7 +108,7 @@ def get_daily_verse_message(user: User) -> FlexMessage:
             layout="vertical",
             contents=[
                 FlexText(
-                    text="📖 今日金句",
+                    text="📖 荒漠甘泉",
                     weight="bold",
                     size="xl",
                     color="#ffffff"
@@ -139,47 +120,57 @@ def get_daily_verse_message(user: User) -> FlexMessage:
         body=FlexBox(
             layout="vertical",
             contents=[
-                # 日期和天數
+                # 日期
                 FlexBox(
                     layout="horizontal",
                     contents=[
                         FlexText(
-                            text=f"第 {current_day} 天",
-                            size="sm",
-                            color="#6b7280",
-                            flex=1
+                            text=f"{month}月{day}日",
+                            size="md",
+                            color="#667eea",
+                            weight="bold",
+                            flex=0
                         ),
                         FlexText(
                             text=today,
                             size="sm",
-                            color="#6b7280",
+                            color="#9ca3af",
                             align="end"
                         )
                     ],
                     margin="none"
                 ),
                 
-                FlexSeparator(margin="md"),
+                FlexSeparator(margin="lg"),
                 
-                # 金句內容
+                # 經文
                 FlexBox(
                     layout="vertical",
                     contents=[
                         FlexText(
-                            text=f"「{verse['text']}」",
-                            size="lg",
+                            text=devotional['verse'],
+                            size="md",
                             color="#1f2937",
                             wrap=True,
                             weight="bold",
-                            margin="xl"
-                        ),
+                            margin="lg"
+                        )
+                    ],
+                    margin="lg"
+                ),
+                
+                FlexSeparator(margin="lg"),
+                
+                # 內容
+                FlexBox(
+                    layout="vertical",
+                    contents=[
                         FlexText(
-                            text=f"— {verse['reference']}",
+                            text=content,
                             size="sm",
-                            color="#667eea",
-                            align="end",
-                            margin="md",
-                            weight="bold"
+                            color="#4b5563",
+                            wrap=True,
+                            margin="md"
                         )
                     ],
                     margin="lg"
@@ -192,7 +183,7 @@ def get_daily_verse_message(user: User) -> FlexMessage:
                     layout="vertical",
                     contents=[
                         FlexText(
-                            text="💡 讓神的話語成為今天的力量",
+                            text="💡 願神的話語成為今天的力量",
                             size="xs",
                             color="#6b7280",
                             align="center",
@@ -208,25 +199,15 @@ def get_daily_verse_message(user: User) -> FlexMessage:
         footer=FlexBox(
             layout="vertical",
             contents=[
-                # 閱讀經文按鈕
+                # 開始讀經按鈕
                 FlexButton(
                     style="primary",
                     color="#667eea",
-                    action=URIAction(
-                        label="📖 閱讀完整經文",
-                        uri=bible_url
-                    ),
-                    height="sm"
-                ),
-                # 開始讀經按鈕
-                FlexButton(
-                    style="link",
                     action=MessageAction(
                         label="開始今日讀經",
                         text="選單"
                     ),
-                    height="sm",
-                    margin="sm"
+                    height="sm"
                 )
             ],
             spacing="sm",
@@ -234,32 +215,31 @@ def get_daily_verse_message(user: User) -> FlexMessage:
         )
     )
     
-    return FlexMessage(alt_text=f"今日金句：{verse['reference']}", contents=bubble)
+    return FlexMessage(alt_text=f"荒漠甘泉 {month}月{day}日", contents=bubble)
 
 
-def get_verse_text(user: User) -> str:
+def get_devotional_text(user: User = None) -> str:
     """
-    獲取每日金句的純文字版本
+    獲取每日荒漠甘泉的純文字版本
     
     Args:
         user: 使用者物件
     
     Returns:
-        str: 金句文字
+        str: 純文字版本的荒漠甘泉
     """
-    verse = get_daily_verse(user)
+    devotional = get_daily_devotional(user)
     
-    if not verse:
-        return "今日金句：你的話是我腳前的燈，是我路上的光。（詩篇 119:105）"
+    if not devotional:
+        return "今天的荒漠甘泉暫時無法獲取，請稍後再試。"
     
-    current_day = user.current_day or 1
-    today = datetime.now().strftime("%Y/%m/%d")
+    month = devotional['month']
+    day = devotional['day']
+    verse = devotional['verse']
+    content = devotional['content'].replace('\f', '\n').strip()
     
-    return f"""📖 今日金句（第 {current_day} 天）
-{today}
-
-「{verse['text']}」
-
-— {verse['reference']}
-
-💡 讓神的話語成為今天的力量"""
+    # 限制長度
+    if len(content) > 500:
+        content = content[:500] + '...'
+    
+    return f"📖 荒漠甘泉 {month}月{day}日\n\n{verse}\n\n{content}"

@@ -687,11 +687,11 @@ def handle_message(event):
         )
         return
     
-    # --- 每日金句指令 ---
-    if text in ["每日金句", "📖 每日金句", "今日金句", "金句"]:
-        from daily_verse import get_daily_verse_message
+    # --- 荒漠甘泉指令 ---
+    if text in ["荒漠甘泉", "📖 荒漠甘泉", "每日金句", "今日金句", "金句"]:
+        from daily_verse import get_daily_devotional_message
         
-        verse_message = get_daily_verse_message(user)
+        verse_message = get_daily_devotional_message(user)
         
         messaging_api.reply_message(
             ReplyMessageRequest(
