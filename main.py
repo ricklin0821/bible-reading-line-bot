@@ -1088,6 +1088,30 @@ async def api_streak_leaderboard():
         return {"error": str(e)}, 500
 
 
+@app.get("/api/leaderboard/newcomer")
+async def api_newcomer_leaderboard():
+    """取得新星榜數據 (JSON 格式)"""
+    try:
+        from leaderboard import get_newcomer_leaderboard
+        rankings = get_newcomer_leaderboard(limit=5)
+        return {
+            "type": "newcomer",
+            "title": "新星榜",
+            "rankings": [
+                {
+                    "display_name": user['display_name'],
+                    "week_score": user['week_score'],
+                    "days_since_joined": user['days_since_joined'],
+                    "star_level": f"{user['stars']} {user['star_title']}"
+                }
+                for user in rankings
+            ]
+        }
+    except Exception as e:
+        print(f"Error in api_newcomer_leaderboard: {e}")
+        return {"error": str(e)}, 500
+
+
 @app.get("/api/leaderboard/total")
 async def api_total_leaderboard():
     """取得總積分排行榜數據 (JSON 格式)"""

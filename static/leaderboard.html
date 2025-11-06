@@ -323,6 +323,7 @@
         <div class="tabs">
             <div class="tab active" data-tab="weekly">📅 本週排行</div>
             <div class="tab" data-tab="streak">🔥 連續天數</div>
+            <div class="tab" data-tab="newcomer">🌟 新星榜</div>
             <div class="tab" data-tab="total">👑 總積分</div>
         </div>
 
@@ -360,6 +361,24 @@
                 <div class="info-box">
                     <h3>🔥 連續天數說明</h3>
                     <p>顯示目前連續讀經天數最多的前 10 名使用者。堅持每天讀經，不僅能獲得額外加成，還能在這個榜單上名列前茅！</p>
+                </div>
+            </div>
+
+            <!-- 新星榜 -->
+            <div id="newcomer" class="tab-content">
+                <div class="leaderboard-header">
+                    <h2 class="leaderboard-title">🌟 新星榜</h2>
+                    <button class="refresh-btn" onclick="loadLeaderboard('newcomer')">🔄 重新整理</button>
+                </div>
+                <div id="newcomer-content">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>載入中...</p>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <h3>🌟 新星榜說明</h3>
+                    <p>顯示加入未滿 30 天的使用者中，本週積分最高的前 5 名。每個人都有機會成為新星，一起努力吧！</p>
                 </div>
             </div>
 
@@ -477,6 +496,9 @@
             } else if (type === 'streak') {
                 tableHTML += '<th>連續天數</th>';
                 tableHTML += '<th>總積分</th>';
+            } else if (type === 'newcomer') {
+                tableHTML += '<th>本週積分</th>';
+                tableHTML += '<th>加入天數</th>';
             } else if (type === 'total') {
                 tableHTML += '<th>總積分</th>';
                 tableHTML += '<th>總讀經天數</th>';
@@ -517,6 +539,9 @@
                 } else if (type === 'streak') {
                     tableHTML += `<td class="streak">🔥 ${user.current_streak} 天</td>`;
                     tableHTML += `<td class="score">${user.total_score} 分</td>`;
+                } else if (type === 'newcomer') {
+                    tableHTML += `<td class="score">${user.week_score} 分</td>`;
+                    tableHTML += `<td>🌟 ${user.days_since_joined} 天</td>`;
                 } else if (type === 'total') {
                     tableHTML += `<td class="score">${user.total_score} 分</td>`;
                     tableHTML += `<td>${user.total_reading_days} 天</td>`;
