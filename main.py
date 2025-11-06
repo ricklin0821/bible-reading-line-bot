@@ -701,6 +701,39 @@ def handle_message(event):
         )
         return
     
+    # --- 荒漠甘泉分享圖片指令 ---
+    if text in ["分享荒漠甘泉", "荒漠甘泉圖片", "生成圖片", "🖼️ 分享圖片"]:
+        from daily_verse import generate_devotional_share_image
+        
+        # 生成圖片
+        image_path = generate_devotional_share_image(user)
+        
+        if image_path:
+            # 上傳圖片到 LINE 伺服器（需要公開 URL）
+            # 這裡我們先傳送文字訊息，後續可以改為上傳圖片
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[
+                        TextMessage(
+                            text=f"✨ 荒漠甘泉分享圖片已生成！\n\n圖片已儲存於：{image_path}\n\n稍後我們會支援直接傳送圖片功能！"
+                        )
+                    ]
+                )
+            )
+        else:
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[
+                        TextMessage(
+                            text="抱歉，無法生成荒漠甘泉分享圖片，請稍後再試。"
+                        )
+                    ]
+                )
+            )
+        return
+    
     # --- (修正) 處理「回報讀經」的文字回覆 ---
     # 增加 "✅ 回報已完成讀經" 的選項
     report_keywords = ["回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]

@@ -9,9 +9,10 @@ from datetime import datetime
 from typing import Optional, Dict
 from linebot.v3.messaging import (
     FlexMessage, FlexBubble, FlexBox, FlexText, FlexButton, FlexSeparator,
-    MessageAction, URIAction
+    MessageAction, URIAction, ImageMessage
 )
 from database import User
+from devotional_image import generate_devotional_image_from_dict
 
 # 荒漠甘泉資料庫路徑
 STREAMS_DB_PATH = os.path.join(os.path.dirname(__file__), 'streams_in_desert.json')
@@ -243,3 +244,27 @@ def get_devotional_text(user: User = None) -> str:
         content = content[:500] + '...'
     
     return f"📖 荒漠甘泉 {month}月{day}日\n\n{verse}\n\n{content}"
+
+
+def generate_devotional_share_image(user: User = None) -> Optional[str]:
+    """
+    生成荒漠甘泉分享圖片
+    
+    Args:
+        user: 使用者物件
+    
+    Returns:
+        str: 圖片檔案路徑
+        None: 如果無法生成
+    """
+    devotional = get_daily_devotional(user)
+    
+    if not devotional:
+        return None
+    
+    try:
+        filepath = generate_devotional_image_from_dict(devotional)
+        return filepath
+    except Exception as e:
+        print(f"Error generating devotional image: {e}")
+        return None
