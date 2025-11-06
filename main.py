@@ -673,6 +673,20 @@ def handle_message(event):
         )
         return
     
+    # --- 隱私設定指令 ---
+    if text in ["隱私設定", "🔒 隱私設定", "排行榜設定", "隱私"]:
+        from privacy_settings import get_privacy_settings_message
+        
+        privacy_message = get_privacy_settings_message(user)
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[privacy_message]
+            )
+        )
+        return
+    
     # --- (修正) 處理「回報讀經」的文字回覆 ---
     # 增加 "✅ 回報已完成讀經" 的選項
     report_keywords = ["回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]
@@ -1082,3 +1096,65 @@ async def api_total_leaderboard():
     except Exception as e:
         print(f"Error in api_total_leaderboard: {e}")
         return {"error": str(e)}, 500
+
+
+# =============================================================================
+# Postback 事件處理 (用於按鈕互動)
+# =============================================================================
+
+@handler.add(PostbackEvent)
+def handle_postback(event):
+    """處理 Postback 事件（按鈕點擊）"""
+    line_user_id = event.source.user_id
+    user = User.get_by_line_user_id(line_user_id)
+    messaging_api: MessagingApi = next(get_messaging_api())
+    
+    if not user:
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="請先加入好友並選擇讀經計畫！")]
+            )
+        )
+        return
+    
+    # 解析 Postback data
+    data = event.postback.data
+    action = None
+    
+    # 解析 action 參數
+    if "action=" in data:
+        action = data.split("action=")[1].split("&")[0]
+    
+    # 處理隱私設定切換
+    if action == "privacy_hide":
+        from privacy_settings import toggle_privacy_setting
+        message_text = toggle_privacy_setting(user, show=False)
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    if action == "privacy_show":
+        from privacy_settings import toggle_privacy_setting
+        message_text = toggle_privacy_setting(user, show=True)
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    # 預設回覆
+    messaging_api.reply_message(
+        ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessage(text="未知的操作")]
+        )
+    )
