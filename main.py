@@ -705,23 +705,31 @@ def handle_message(event):
     # 增加 "✅ 回報已完成讀經" 的選項
     report_keywords = ["回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]
     if text in report_keywords:
-        # 檢查今天是否已完成測驗
-        today_str = datetime.now().date().isoformat()
-        # 處理 last_read_date 可能是字串或 date 物件
-        last_read_str = user.last_read_date
-        if isinstance(last_read_str, date):
-            last_read_str = last_read_str.isoformat()
-        elif isinstance(last_read_str, datetime):
-            last_read_str = last_read_str.date().isoformat()
+        # 檢查是否已超前 7 天
+        today = datetime.now().date()
         
-        if last_read_str == today_str:
-            messaging_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text="🎉 您今天已經完成所有任務了！\n\n🙏 感謝神，您又完成了一天的屬靈功課！\n\n🌟 明天再回來繼續讀經吧！")]
+        # 處理 last_read_date 可能是字串、date 或 datetime 物件
+        last_read_date = user.last_read_date
+        if isinstance(last_read_date, str):
+            try:
+                last_read_date = datetime.strptime(last_read_date, "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                last_read_date = None
+        elif isinstance(last_read_date, datetime):
+            last_read_date = last_read_date.date()
+        
+        # 如果有上次讀經記錄，檢查是否超前太多
+        if last_read_date:
+            days_ahead = (last_read_date - today).days
+            
+            if days_ahead >= 7:
+                messaging_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=f"😊 弟兄姊妹，請休息一下！\n\n您已經提前完成了 {days_ahead} 天的讀經，已經超過了最多提前 7 天的限制。\n\n📚 讀經貴在每日穩定，不要囫圓吞棗。讓我們養成每日讀經的習慣，讓神的話語每天滿足我們！\n\n⚡ {today.strftime('%Y/%m/%d')} 再回來繼續讀經吧！")]
+                    )
                 )
-            )
-            return
+                return
             
         # 檢查是否有未完成的測驗
         if user.quiz_state == "WAITING_ANSWER":

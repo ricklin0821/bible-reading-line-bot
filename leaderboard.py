@@ -21,7 +21,6 @@ def get_weekly_leaderboard(limit: int = 10) -> List[Dict]:
     """
     users_ref = db.collection(USERS_COLLECTION)
     query = (users_ref
-             .where(filter=firestore.FieldFilter('show_in_leaderboard', '==', True))
              .where(filter=firestore.FieldFilter('week_score', '>', 0))
              .order_by('week_score', direction=firestore.Query.DESCENDING)
              .limit(limit))
@@ -33,9 +32,16 @@ def get_weekly_leaderboard(limit: int = 10) -> List[Dict]:
         user_data = doc.to_dict()
         star_level = get_star_level(user_data.get('total_score', 0))
         
+        # 如果使用者設定隱藏，顯示為「匿名使用者」
+        show_in_leaderboard = user_data.get('show_in_leaderboard', True)
+        if show_in_leaderboard:
+            display_name = user_data.get('display_name') or '匿名使用者'
+        else:
+            display_name = '匿名使用者'
+        
         leaderboard.append({
             'rank': i,
-            'display_name': user_data.get('display_name_public') or user_data.get('display_name') or '匿名使用者',
+            'display_name': display_name,
             'week_score': user_data.get('week_score', 0),
             'current_streak': user_data.get('current_streak', 0),
             'week_reading_days': user_data.get('week_reading_days', 0),
@@ -59,7 +65,6 @@ def get_streak_leaderboard(limit: int = 10) -> List[Dict]:
     """
     users_ref = db.collection(USERS_COLLECTION)
     query = (users_ref
-             .where(filter=firestore.FieldFilter('show_in_leaderboard', '==', True))
              .where(filter=firestore.FieldFilter('current_streak', '>', 0))
              .order_by('current_streak', direction=firestore.Query.DESCENDING)
              .limit(limit))
@@ -71,9 +76,16 @@ def get_streak_leaderboard(limit: int = 10) -> List[Dict]:
         user_data = doc.to_dict()
         star_level = get_star_level(user_data.get('total_score', 0))
         
+        # 如果使用者設定隱藏，顯示為「匿名使用者」
+        show_in_leaderboard = user_data.get('show_in_leaderboard', True)
+        if show_in_leaderboard:
+            display_name = user_data.get('display_name') or '匿名使用者'
+        else:
+            display_name = '匿名使用者'
+        
         leaderboard.append({
             'rank': i,
-            'display_name': user_data.get('display_name_public') or user_data.get('display_name') or '匿名使用者',
+            'display_name': display_name,
             'current_streak': user_data.get('current_streak', 0),
             'longest_streak': user_data.get('longest_streak', 0),
             'total_score': user_data.get('total_score', 0),
@@ -98,9 +110,8 @@ def get_newcomer_leaderboard(limit: int = 5) -> List[Dict]:
     
     users_ref = db.collection(USERS_COLLECTION)
     
-    # 先查詢所有加入未滿 30 天且顯示在排行榜的使用者
+    # 先查詢所有加入未滿 30 天的使用者
     query = (users_ref
-             .where(filter=firestore.FieldFilter('show_in_leaderboard', '==', True))
              .where(filter=firestore.FieldFilter('joined_date', '>=', thirty_days_ago)))
     
     docs = list(query.stream())
@@ -126,9 +137,16 @@ def get_newcomer_leaderboard(limit: int = 5) -> List[Dict]:
         else:
             days_since_joined = 0
         
+        # 如果使用者設定隱藏，顯示為「匿名使用者」
+        show_in_leaderboard = user_data.get('show_in_leaderboard', True)
+        if show_in_leaderboard:
+            display_name = user_data.get('display_name') or '匿名使用者'
+        else:
+            display_name = '匿名使用者'
+        
         leaderboard.append({
             'rank': i,
-            'display_name': user_data.get('display_name_public') or user_data.get('display_name') or '匿名使用者',
+            'display_name': display_name,
             'week_score': user_data.get('week_score', 0),
             'current_streak': user_data.get('current_streak', 0),
             'days_since_joined': days_since_joined,
@@ -152,7 +170,6 @@ def get_total_leaderboard(limit: int = 20) -> List[Dict]:
     """
     users_ref = db.collection(USERS_COLLECTION)
     query = (users_ref
-             .where(filter=firestore.FieldFilter('show_in_leaderboard', '==', True))
              .where(filter=firestore.FieldFilter('total_score', '>', 0))
              .order_by('total_score', direction=firestore.Query.DESCENDING)
              .limit(limit))
@@ -164,9 +181,16 @@ def get_total_leaderboard(limit: int = 20) -> List[Dict]:
         user_data = doc.to_dict()
         star_level = get_star_level(user_data.get('total_score', 0))
         
+        # 如果使用者設定隱藏，顯示為「匿名使用者」
+        show_in_leaderboard = user_data.get('show_in_leaderboard', True)
+        if show_in_leaderboard:
+            display_name = user_data.get('display_name') or '匿名使用者'
+        else:
+            display_name = '匿名使用者'
+        
         leaderboard.append({
             'rank': i,
-            'display_name': user_data.get('display_name_public') or user_data.get('display_name') or '匿名使用者',
+            'display_name': display_name,
             'total_score': user_data.get('total_score', 0),
             'current_streak': user_data.get('current_streak', 0),
             'total_reading_days': user_data.get('total_reading_days', 0),
