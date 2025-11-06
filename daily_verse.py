@@ -7,10 +7,10 @@ import json
 import os
 from datetime import datetime
 from typing import Optional, Dict
-from linebot.models import (
-    FlexMessage, FlexBubble, FlexBox, FlexText, FlexButton, FlexSeparator
+from linebot.v3.messaging import (
+    FlexMessage, FlexBubble, FlexBox, FlexText, FlexButton, FlexSeparator,
+    MessageAction, URIAction
 )
-from linebot.models.actions import MessageAction, URIAction
 from database import User
 
 # 荒漠甘泉資料庫路徑
