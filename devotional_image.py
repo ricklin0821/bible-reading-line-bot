@@ -13,8 +13,28 @@ IMAGE_WIDTH = 1080
 IMAGE_HEIGHT = 1080
 
 # 字型路徑（使用系統字型）
-FONT_PATH = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
-FONT_BOLD_PATH = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+# 嘗試多個可能的字型路徑
+FONT_PATHS = [
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+]
+
+FONT_BOLD_PATHS = [
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc",
+]
+
+# 尋找可用的字型檔案
+def find_font(paths):
+    for path in paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+FONT_PATH = find_font(FONT_PATHS)
+FONT_BOLD_PATH = find_font(FONT_BOLD_PATHS)
 
 # 儲存路徑
 SAVE_DIR = os.path.join(os.path.dirname(__file__), 'devotional_images')
@@ -122,13 +142,19 @@ def generate_devotional_image(
     
     # 載入字型
     try:
-        font_title = ImageFont.truetype(FONT_BOLD_PATH, 56)
-        font_date = ImageFont.truetype(FONT_PATH, 36)
-        font_verse = ImageFont.truetype(FONT_BOLD_PATH, 40)
-        font_verse_ref = ImageFont.truetype(FONT_PATH, 30)
-        font_content = ImageFont.truetype(FONT_PATH, 30)
-        font_footer = ImageFont.truetype(FONT_PATH, 26)
-    except:
+        if FONT_PATH and FONT_BOLD_PATH:
+            font_title = ImageFont.truetype(FONT_BOLD_PATH, 56)
+            font_date = ImageFont.truetype(FONT_PATH, 36)
+            font_verse = ImageFont.truetype(FONT_BOLD_PATH, 40)
+            font_verse_ref = ImageFont.truetype(FONT_PATH, 30)
+            font_content = ImageFont.truetype(FONT_PATH, 30)
+            font_footer = ImageFont.truetype(FONT_PATH, 26)
+            print(f"Successfully loaded fonts: {FONT_PATH}")
+        else:
+            raise Exception("Font files not found")
+    except Exception as e:
+        print(f"Warning: Failed to load fonts: {e}")
+        print("Using default font (Chinese characters may not display correctly)")
         # 如果載入失敗，使用預設字型
         font_title = ImageFont.load_default()
         font_date = ImageFont.load_default()

@@ -4,6 +4,13 @@ FROM python:3.11-slim
 # 設定工作目錄
 WORKDIR /app
 
+# 安裝系統套件和中文字型
+RUN apt-get update && apt-get install -y \
+    fonts-noto-cjk \
+    fontconfig \
+    && fc-cache -fv \
+    && rm -rf /var/lib/apt/lists/*
+
 # 複製依賴檔案
 COPY requirements.txt .
 
