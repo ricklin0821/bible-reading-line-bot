@@ -713,7 +713,7 @@ def handle_message(event):
         return
     
     # --- 荒漠甘泉分享圖片指令 ---
-    if text in ["分享荒漠甘泉", "荒漠甘泉圖片", "生成圖片", "🖼️ 分享圖片"]:
+    if text in ["荒漠甘泉圖片", "🖼️ 荒漠甘泉圖片", "分享荒漠甘泉", "生成圖片"]:
         from daily_verse import generate_devotional_share_image
         import os
         
@@ -1257,3 +1257,78 @@ def handle_postback(event):
             messages=[TextMessage(text="未知的操作")]
         )
     )
+
+
+# ============================================================
+# 每日自動發送荒漠甘泉圖片觸發端點
+# ============================================================
+
+@app.post("/trigger/daily-devotional")
+async def trigger_daily_devotional(request: Request):
+    """
+    每日自動發送荒漠甘泉圖片的觸發端點
+    由 Cloud Scheduler 在每天中午 12:30 調用
+    """
+    try:
+        from daily_verse import generate_devotional_share_image
+        
+        # 獲取所有使用者
+        users = User.get_all_users()
+        
+        print(f"開始發送每日荒漠甘泉圖片給 {len(users)} 位使用者...")
+        
+        success_count = 0
+        fail_count = 0
+        
+        for user in users:
+            try:
+                # 生成圖片
+                image_path = generate_devotional_share_image(user)
+                
+                if not image_path:
+                    print(f"❌ 無法為使用者 {user.user_id} 生成圖片")
+                    fail_count += 1
+                    continue
+                
+                # 獲取圖片檔名
+                image_filename = os.path.basename(image_path)
+                
+                # 產生公開 URL
+                base_url = os.environ.get('BASE_URL', 'https://bible-bot-741437082833.asia-east1.run.app')
+                image_url = f"{base_url}/devotional_images/{image_filename}"
+                
+                # 發送圖片
+                messaging_api.push_message(
+                    PushMessageRequest(
+                        to=user.user_id,
+                        messages=[
+                            TextMessage(text="🌅 中午好！今天的荒漠甘泉："),
+                            ImageMessage(
+                                original_content_url=image_url,
+                                preview_image_url=image_url
+                            )
+                        ]
+                    )
+                )
+                
+                print(f"✅ 成功發送給使用者 {user.user_id}")
+                success_count += 1
+                
+            except Exception as e:
+                print(f"❌ 發送給使用者 {user.user_id} 失敗: {e}")
+                fail_count += 1
+        
+        result = {
+            "status": "completed",
+            "success_count": success_count,
+            "fail_count": fail_count,
+            "total_users": len(users)
+        }
+        
+        print(f"\n發送完成！成功: {success_count}, 失敗: {fail_count}")
+        
+        return result
+        
+    except Exception as e:
+        print(f"❌ 觸發每日發送失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

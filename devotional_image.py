@@ -241,11 +241,13 @@ def generate_devotional_image(
     if len(content_clean) > 150:
         content_clean = content_clean[:150] + '...'
     
-    # 換行處理
-    content_lines = wrap_text(content_clean, font_content, IMAGE_WIDTH - 160)
+    # 換行處理（確保不溢出白底框）
+    content_lines = wrap_text(content_clean, font_content, IMAGE_WIDTH - 200)  # 增加邊界
     
-    # 限制行數
-    max_content_lines = 6
+    # 計算可用的高度（白底框內）
+    available_height = IMAGE_HEIGHT - card_margin - 150 - y  # 留給底部標語的空間
+    max_content_lines = int(available_height / 48) - 1  # 每行 48px
+    
     if len(content_lines) > max_content_lines:
         content_lines = content_lines[:max_content_lines]
         if content_lines[-1]:
@@ -256,15 +258,7 @@ def generate_devotional_image(
             draw.text((100, y), line, fill=(75, 85, 99), font=font_content)
         y += 48
     
-    # 8. 提示文字
-    y += 30
-    hint_text = "點擊「荒漠甘泉」查看完整內容"
-    bbox = draw.textbbox((0, 0), hint_text, font=font_footer)
-    hint_width = bbox[2] - bbox[0]
-    hint_x = (IMAGE_WIDTH - hint_width) // 2
-    draw.text((hint_x, y), hint_text, fill=(156, 163, 175), font=font_footer)
-    
-    # 9. 底部標語
+    # 8. 底部標語（移除點擊提示）
     y = IMAGE_HEIGHT - card_margin - 70
     footer_text = "💡 願神的話語成為今天的力量"
     bbox = draw.textbbox((0, 0), footer_text, font=font_footer)
