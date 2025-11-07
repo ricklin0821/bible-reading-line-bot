@@ -5,4 +5,5 @@ line-bot-sdk>=3.0.0
 pandas
 google-cloud-firestore
 packaging
+Pillow>=10.0.0
 
