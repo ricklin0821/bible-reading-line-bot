@@ -11,6 +11,7 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi, ReplyMessageRequest, TextMessage, 
     FlexMessage, PushMessageRequest, QuickReply, QuickReplyItem, MessageAction,
+    ImageMessage,  # 圖片訊息
     # --- (FlexMessage 相關模組) ---
     FlexContainer, FlexBubble, FlexBox, FlexText, FlexButton, URIAction, 
     FlexSeparator
@@ -49,6 +50,16 @@ try:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 except Exception as e:
     print(f"Warning: Could not mount static directory: {e}")
+
+# 荒漠甘泉圖片靜態檔案服務
+try:
+    import os
+    devotional_images_dir = os.path.join(os.path.dirname(__file__), "devotional_images")
+    os.makedirs(devotional_images_dir, exist_ok=True)
+    app.mount("/devotional_images", StaticFiles(directory=devotional_images_dir), name="devotional_images")
+    print(f"Devotional images directory mounted: {devotional_images_dir}")
+except Exception as e:
+    print(f"Warning: Could not mount devotional_images directory: {e}")
 
 # 在應用啟動時執行一次資料庫初始化
 @app.on_event("startup")
@@ -704,19 +715,28 @@ def handle_message(event):
     # --- 荒漠甘泉分享圖片指令 ---
     if text in ["分享荒漠甘泉", "荒漠甘泉圖片", "生成圖片", "🖼️ 分享圖片"]:
         from daily_verse import generate_devotional_share_image
+        import os
         
         # 生成圖片
         image_path = generate_devotional_share_image(user)
         
         if image_path:
-            # 上傳圖片到 LINE 伺服器（需要公開 URL）
-            # 這裡我們先傳送文字訊息，後續可以改為上傳圖片
+            # 獲取圖片檔名
+            image_filename = os.path.basename(image_path)
+            
+            # 產生公開 URL（使用 Cloud Run 的域名）
+            # 在本地測試時使用 localhost，部署後會自動使用正確的域名
+            base_url = os.environ.get('BASE_URL', 'https://bible-bot-741437082833.asia-east1.run.app')
+            image_url = f"{base_url}/devotional_images/{image_filename}"
+            
+            # 使用 ImageMessage 傳送圖片
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
                     messages=[
-                        TextMessage(
-                            text=f"✨ 荒漠甘泉分享圖片已生成！\n\n圖片已儲存於：{image_path}\n\n稍後我們會支援直接傳送圖片功能！"
+                        ImageMessage(
+                            original_content_url=image_url,
+                            preview_image_url=image_url
                         )
                     ]
                 )
