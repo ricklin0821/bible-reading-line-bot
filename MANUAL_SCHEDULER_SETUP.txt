@@ -1,0 +1,65 @@
+=================================================================
+Manual Scheduler Setup Commands (Copy and Paste One by One)
+=================================================================
+
+Step 1: Set Project
+-------------------
+gcloud config set project bible-bot-project
+
+
+Step 2: List Current Jobs
+--------------------------
+gcloud scheduler jobs list --location=asia-east1
+
+
+Step 3: Delete All Old Jobs
+----------------------------
+gcloud scheduler jobs delete bible-push-morning --location=asia-east1 --quiet
+
+gcloud scheduler jobs delete bible-push-noon --location=asia-east1 --quiet
+
+gcloud scheduler jobs delete bible-push-evening --location=asia-east1 --quiet
+
+gcloud scheduler jobs delete bible-push-night --location=asia-east1 --quiet
+
+gcloud scheduler jobs delete daily-devotional-sender --location=asia-east1 --quiet
+
+
+Step 4: Create Job 1 - Daily 11 PM Reading Reminder
+----------------------------------------------------
+gcloud scheduler jobs create http bible-push-night --location=asia-east1 --schedule="0 23 * * *" --time-zone="Asia/Taipei" --uri="https://bible-bot-741437082833.asia-east1.run.app/trigger/send-reading-plan" --http-method=POST --oidc-service-account-email=741437082833-compute@developer.gserviceaccount.com --oidc-token-audience=https://bible-bot-741437082833.asia-east1.run.app
+
+
+Step 5: Create Job 2 - Daily 12:30 PM Devotional Image
+-------------------------------------------------------
+gcloud scheduler jobs create http daily-devotional-sender --location=asia-east1 --schedule="30 12 * * *" --time-zone="Asia/Taipei" --uri="https://bible-bot-741437082833.asia-east1.run.app/trigger/send-devotional-image" --http-method=POST --oidc-service-account-email=741437082833-compute@developer.gserviceaccount.com --oidc-token-audience=https://bible-bot-741437082833.asia-east1.run.app
+
+
+Step 6: Verify Final Jobs
+--------------------------
+gcloud scheduler jobs list --location=asia-east1
+
+
+=================================================================
+Expected Result:
+=================================================================
+You should see only 2 jobs:
+1. bible-push-night (Schedule: 0 23 * * *)
+2. daily-devotional-sender (Schedule: 30 12 * * *)
+
+
+=================================================================
+Cost Calculation:
+=================================================================
+Cloud Scheduler: 2 jobs x $0.04 = $0.08/month
+LINE Push API: (600 - 200 free) x $0.003 = $1.20/month
+Total: ~$1.28/month
+
+
+=================================================================
+Notes:
+=================================================================
+- 11 PM: Send reading reminder to all users
+- 12:30 PM: Send devotional image to all users
+- Users can use Rich Menu anytime for active queries
+- All replies via Rich Menu are FREE (Reply API)
