@@ -478,6 +478,108 @@ def handle_message(event):
         handle_follow(event)
         return
 
+    # ============================================
+    # Rich Menu 按鈕處理 (英文觸發文字)
+    # ============================================
+    
+    # 今日讀經 (Today Reading)
+    if text in ["Today Reading", "今日讀經"]:
+        # 與原有的讀經計畫顯示邏輯相同
+        readings = get_current_reading_plan(user)
+        try:
+            plan_message = get_reading_plan_message(user, readings)
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[plan_message]
+                )
+            )
+        except Exception as e:
+            print(f"Error sending reading plan: {e}")
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=f"抱歉，取得讀經計畫時發生錯誤：{str(e)}")]
+                )
+            )
+        return
+    
+    # 荒漠甘泉 (Devotional)
+    elif text in ["Devotional", "荒漠甘泉"]:
+        from daily_verse import get_daily_devotional_message
+        verse_message = get_daily_devotional_message(user)
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[verse_message]
+            )
+        )
+        return
+    
+    # 回報讀經 (Report) - 由下方的 report_keywords 處理
+    
+    # 我的進度 (Progress)
+    if text in ["Progress", "我的進度"]:
+        # 顯示個人統計資料
+        stats = get_user_stats(user)
+        message_text = f"""📊 您的讀經數據
+
+總積分：{stats['total_score']} 分 {stats['stars']}
+本週積分：{stats['week_score']} 分
+
+🔥 連續讀經：{stats['current_streak']} 天
+🏆 最長連續：{stats['longest_streak']} 天
+📚 總讀經天數：{stats['total_reading_days']} 天
+✅ 本週完成：{stats['week_reading_days']} 天
+
+🎯 測驗正確率：{stats['quiz_accuracy']:.1f}%
+⭐ 全對次數：{stats['quiz_perfect_count']} / {stats['quiz_total_count']}
+"""
+        if stats['badges']:
+            message_text += f"\n🏅 已獲得徽章：{''.join(stats['badges'])}"
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    # 排行榜 (Leaderboard)
+    elif text in ["Leaderboard", "排行榜"]:
+        # 發送排行榜網頁連結
+        leaderboard_url = "https://bible-bot-741437082833.asia-east1.run.app/leaderboard.html"
+        message_text = f"🏆 查看排行榜\n\n{leaderboard_url}\n\n包含：本週榜、連續榜、總榜、新星榜"
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    # 選單 (Menu)
+    elif text in ["Menu", "選單"]:
+        menu_text = """⚙️ 更多功能
+
+請選擇您要使用的功能：
+
+📖 荒漠甘泉圖片 - 生成今日靈修分享圖
+🔒 隱私設定 - 設定排行榜顯示
+📞 聯繫作者 - 與我們聯繫
+🏆 排行榜 - 查看各類排行榜
+📊 我的數據 - 查看個人統計
+
+請直接輸入功能名稱或使用下方選單"""
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=menu_text)]
+            )
+        )
+        return
+
     # --- 處理「聯繫作者」功能 ---
     if text == "聯繫作者":
         # 記錄使用者狀態為等待輸入 EMAIL
@@ -756,7 +858,7 @@ def handle_message(event):
     
     # --- (修正) 處理「回報讀經」的文字回覆 ---
     # 增加 "✅ 回報已完成讀經" 的選項
-    report_keywords = ["回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]
+    report_keywords = ["Report", "回報讀經", "已讀完", "開始測驗", "回報已完成讀經", "✅ 回報已完成讀經"]
     if text in report_keywords:
         # 檢查是否已超前 7 天
         today = datetime.now().date()
