@@ -197,7 +197,7 @@ def generate_devotional_image(
     y = content_area_top
     
     # 1. 標題「荒漠甘泉」
-    title = "📖 荒漠甘泉"
+    title = "荒漠甘泉"
     bbox = draw.textbbox((0, 0), title, font=font_title)
     title_width = bbox[2] - bbox[0]
     title_x = (IMAGE_WIDTH - title_width) // 2
@@ -289,7 +289,7 @@ def generate_devotional_image(
         font_button = font_content
     
     # 按鈕 1：點擊【荒漠甘泉】讀全文
-    button1_text = "📖 點擊【荒漠甘泉】讀全文"
+    button1_text = "點擊【荒漠甘泉】讀全文"
     bbox1 = draw.textbbox((0, 0), button1_text, font=font_button)
     button1_width = bbox1[2] - bbox1[0]
     button1_height = bbox1[3] - bbox1[1]
@@ -309,7 +309,7 @@ def generate_devotional_image(
     
     # 按鈕 2：記得【今日讀經】進度
     button2_y = button_y + button1_height + 30
-    button2_text = "✅ 記得【今日讀經】進度"
+    button2_text = "記得【今日讀經】進度"
     bbox2 = draw.textbbox((0, 0), button2_text, font=font_button)
     button2_width = bbox2[2] - bbox2[0]
     button2_height = bbox2[3] - bbox2[1]
