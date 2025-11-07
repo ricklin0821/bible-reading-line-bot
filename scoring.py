@@ -399,12 +399,13 @@ def get_user_rank(user: UserObject, leaderboard_type: str = "weekly") -> Optiona
     return higher_count + 1
 
 
-def format_score_message(result: Dict) -> str:
+def format_score_message(result: Dict, user: UserObject = None) -> str:
     """
     格式化計分結果訊息
     
     Args:
         result: add_reading_score 返回的結果
+        user: 使用者物件（可選，用於顯示總分和排名）
     
     Returns:
         str: 格式化的訊息
@@ -433,5 +434,29 @@ def format_score_message(result: Dict) -> str:
     if result['new_badges']:
         messages.append("\n")
         messages.extend(result['messages'])
+    
+    # 如果有使用者物件，顯示總積分和排名
+    if user:
+        messages.append("\n" + "="*30)
+        
+        # 總積分
+        total_score = user.total_score or 0
+        messages.append(f"\n🏆 目前總積分：{total_score} 分")
+        
+        # 排行榜排名
+        try:
+            weekly_rank = get_user_rank(user, "weekly")
+            total_rank = get_user_rank(user, "total")
+            
+            rank_parts = []
+            if weekly_rank:
+                rank_parts.append(f"本週第 {weekly_rank} 名")
+            if total_rank:
+                rank_parts.append(f"總榜第 {total_rank} 名")
+            
+            if rank_parts:
+                messages.append(f"🎯 排行榜：{' | '.join(rank_parts)}")
+        except Exception as e:
+            print(f"Error getting user rank: {e}")
     
     return '\n'.join(messages)

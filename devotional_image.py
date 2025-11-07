@@ -71,7 +71,7 @@ def create_gradient_background(width: int, height: int, color1: tuple, color2: t
 
 def wrap_text(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list:
     """
-    將文字換行以適應指定寬度
+    將文字換行以適應指定寬度（支持中文）
     
     Args:
         text: 要換行的文字
@@ -82,18 +82,16 @@ def wrap_text(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list:
         list: 換行後的文字列表
     """
     lines = []
-    words = text.replace('\n', ' \n ').split(' ')
     current_line = ""
     
-    for word in words:
-        if word == '\n':
+    for char in text:
+        if char == '\n':
             if current_line:
-                lines.append(current_line.strip())
+                lines.append(current_line)
                 current_line = ""
-            lines.append("")
             continue
-            
-        test_line = current_line + word + " "
+        
+        test_line = current_line + char
         bbox = font.getbbox(test_line)
         width = bbox[2] - bbox[0]
         
@@ -101,11 +99,11 @@ def wrap_text(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list:
             current_line = test_line
         else:
             if current_line:
-                lines.append(current_line.strip())
-            current_line = word + " "
+                lines.append(current_line)
+            current_line = char
     
     if current_line:
-        lines.append(current_line.strip())
+        lines.append(current_line)
     
     return lines
 
@@ -183,8 +181,20 @@ def generate_devotional_image(
     img = img.convert('RGB')
     draw = ImageDraw.Draw(img)
     
+    # 定義布局常數
+    content_margin_x = 100  # 內容左右邊界
+    line_margin = 150  # 分隔線邊界
+    
+    # 計算底部按鈕所需空間（固定高度）
+    button_section_height = 180  # 兩個按鈕 + 間距
+    
+    # 計算可用的內容區域高度
+    content_area_top = card_margin + 50
+    content_area_bottom = IMAGE_HEIGHT - card_margin - button_section_height - 20  # 留 20px 緩衝
+    max_content_height = content_area_bottom - content_area_top
+    
     # 當前 Y 位置
-    y = card_margin + 50
+    y = content_area_top
     
     # 1. 標題「荒漠甘泉」
     title = "📖 荒漠甘泉"
@@ -192,7 +202,7 @@ def generate_devotional_image(
     title_width = bbox[2] - bbox[0]
     title_x = (IMAGE_WIDTH - title_width) // 2
     draw.text((title_x, y), title, fill=(102, 126, 234), font=font_title)
-    y += 80
+    y += 75
     
     # 2. 日期
     date_text = f"{month}月{day}日"
@@ -200,63 +210,71 @@ def generate_devotional_image(
     date_width = bbox[2] - bbox[0]
     date_x = (IMAGE_WIDTH - date_width) // 2
     draw.text((date_x, y), date_text, fill=(107, 114, 128), font=font_date)
-    y += 70
+    y += 60
     
     # 3. 分隔線
-    line_margin = 150
     draw.line([(line_margin, y), (IMAGE_WIDTH - line_margin, y)], fill=(209, 213, 219), width=2)
-    y += 50
+    y += 40
     
     # 4. 經文（加粗、居中）
-    # 清理經文（移除引號）
-    verse_clean = verse.replace('‚', '').replace('„', '').replace('"', '').replace('"', '').strip()
+    verse_clean = verse.replace('‚', '').replace('„', '').replace('“', '').replace('”', '').strip()
     
-    # 換行處理
-    verse_lines = wrap_text(verse_clean, font_verse, IMAGE_WIDTH - 200)
+    # 經文換行（使用較寬的寬度）
+    verse_lines = wrap_text(verse_clean, font_verse, IMAGE_WIDTH - 240)
+    
+    # 限制經文最多 2 行
+    if len(verse_lines) > 2:
+        verse_lines = verse_lines[:2]
+        if verse_lines[-1]:
+            verse_lines[-1] = verse_lines[-1][:30] + '...'
     
     for line in verse_lines:
         bbox = draw.textbbox((0, 0), line, font=font_verse)
         line_width = bbox[2] - bbox[0]
         line_x = (IMAGE_WIDTH - line_width) // 2
         draw.text((line_x, y), line, fill=(31, 41, 55), font=font_verse)
-        y += 60
+        y += 55
     
     # 5. 經文出處
     if verse_ref:
-        y += 10
+        y += 5
         ref_text = f"— {verse_ref}"
         bbox = draw.textbbox((0, 0), ref_text, font=font_verse_ref)
         ref_width = bbox[2] - bbox[0]
         ref_x = (IMAGE_WIDTH - ref_width) // 2
         draw.text((ref_x, y), ref_text, fill=(107, 114, 128), font=font_verse_ref)
-        y += 60
+        y += 50
     
     # 6. 分隔線
     draw.line([(line_margin, y), (IMAGE_WIDTH - line_margin, y)], fill=(209, 213, 219), width=2)
-    y += 50
+    y += 35
     
-    # 7. 內容摘要（限制長度 - 更簡潔版）
+    # 7. 內容摘要（動態計算可用高度）
     content_clean = content.replace('\f', ' ').replace('\n', ' ').strip()
-    # 只顯示前 120 字，為底部按鈕留出更多空間
-    if len(content_clean) > 120:
-        content_clean = content_clean[:120] + '...'
     
-    # 換行處理（確保不溢出白底框）
-    content_lines = wrap_text(content_clean, font_content, IMAGE_WIDTH - 200)  # 增加邊界
+    # 計算剩餘可用高度
+    remaining_height = content_area_bottom - y
+    max_content_lines = max(1, int(remaining_height / 42))  # 每行 42px
     
-    # 計算可用的高度（白底框內，為底部按鈕留出 200px）
-    available_height = IMAGE_HEIGHT - card_margin - 250 - y  # 留給底部按鈕的空間
-    max_content_lines = int(available_height / 48) - 1  # 每行 48px
+    # 根據可用行數計算最大字數
+    max_chars = max_content_lines * 25  # 每行約 25 字
+    if len(content_clean) > max_chars:
+        content_clean = content_clean[:max_chars] + '...'
     
+    # 換行處理
+    content_lines = wrap_text(content_clean, font_content, IMAGE_WIDTH - 2 * content_margin_x)
+    
+    # 限制行數
     if len(content_lines) > max_content_lines:
         content_lines = content_lines[:max_content_lines]
-        if content_lines[-1]:
-            content_lines[-1] = content_lines[-1][:35] + '...'
+        if content_lines and content_lines[-1]:
+            content_lines[-1] = content_lines[-1][:30] + '...'
     
+    # 繪製內容（確保不超出範圍）
     for line in content_lines:
-        if line:  # 跳過空行
-            draw.text((100, y), line, fill=(75, 85, 99), font=font_content)
-        y += 48
+        if line and y < content_area_bottom:  # 雙重檢查
+            draw.text((content_margin_x, y), line, fill=(75, 85, 99), font=font_content)
+            y += 42
     
     # 8. 底部按鈕樣式提醒（兩個醒目的按鈕）
     button_y = IMAGE_HEIGHT - card_margin - 150

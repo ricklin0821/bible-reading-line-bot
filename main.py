@@ -965,8 +965,8 @@ def handle_message(event):
             user.save()
             print(f"[DEBUG] User data saved")
             
-            # 將計分結果加入回覆訊息
-            score_message = format_score_message(scoring_result)
+            # 將計分結果加入回覆訊息（包含總積分和排名）
+            score_message = format_score_message(scoring_result, user)
             reply_messages.append(TextMessage(text=score_message))
         else:
             user.save() 
