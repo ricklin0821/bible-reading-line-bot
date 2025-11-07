@@ -235,36 +235,79 @@ def generate_devotional_image(
     draw.line([(line_margin, y), (IMAGE_WIDTH - line_margin, y)], fill=(209, 213, 219), width=2)
     y += 50
     
-    # 7. 內容摘要（限制長度 - 簡潔版）
+    # 7. 內容摘要（限制長度 - 更簡潔版）
     content_clean = content.replace('\f', ' ').replace('\n', ' ').strip()
-    # 只顯示前 150 字
-    if len(content_clean) > 150:
-        content_clean = content_clean[:150] + '...'
+    # 只顯示前 120 字，為底部按鈕留出更多空間
+    if len(content_clean) > 120:
+        content_clean = content_clean[:120] + '...'
     
     # 換行處理（確保不溢出白底框）
     content_lines = wrap_text(content_clean, font_content, IMAGE_WIDTH - 200)  # 增加邊界
     
-    # 計算可用的高度（白底框內）
-    available_height = IMAGE_HEIGHT - card_margin - 150 - y  # 留給底部標語的空間
+    # 計算可用的高度（白底框內，為底部按鈕留出 200px）
+    available_height = IMAGE_HEIGHT - card_margin - 250 - y  # 留給底部按鈕的空間
     max_content_lines = int(available_height / 48) - 1  # 每行 48px
     
     if len(content_lines) > max_content_lines:
         content_lines = content_lines[:max_content_lines]
         if content_lines[-1]:
-            content_lines[-1] = content_lines[-1][:40] + '...'
+            content_lines[-1] = content_lines[-1][:35] + '...'
     
     for line in content_lines:
         if line:  # 跳過空行
             draw.text((100, y), line, fill=(75, 85, 99), font=font_content)
         y += 48
     
-    # 8. 底部標語（移除點擊提示）
-    y = IMAGE_HEIGHT - card_margin - 70
-    footer_text = "💡 願神的話語成為今天的力量"
-    bbox = draw.textbbox((0, 0), footer_text, font=font_footer)
-    footer_width = bbox[2] - bbox[0]
-    footer_x = (IMAGE_WIDTH - footer_width) // 2
-    draw.text((footer_x, y), footer_text, fill=(107, 114, 128), font=font_footer)
+    # 8. 底部按鈕樣式提醒（兩個醒目的按鈕）
+    button_y = IMAGE_HEIGHT - card_margin - 150
+    
+    # 載入按鈕字型（較大、較粗）
+    try:
+        if FONT_BOLD_PATH:
+            font_button = ImageFont.truetype(FONT_BOLD_PATH, 32)
+        else:
+            font_button = font_content
+    except:
+        font_button = font_content
+    
+    # 按鈕 1：點擊【荒漠甘泉】讀全文
+    button1_text = "📖 點擊【荒漠甘泉】讀全文"
+    bbox1 = draw.textbbox((0, 0), button1_text, font=font_button)
+    button1_width = bbox1[2] - bbox1[0]
+    button1_height = bbox1[3] - bbox1[1]
+    button1_x = (IMAGE_WIDTH - button1_width) // 2
+    
+    # 繪製按鈕背景（圓角矩形）
+    button1_rect = [
+        button1_x - 20, 
+        button_y - 10, 
+        button1_x + button1_width + 20, 
+        button_y + button1_height + 10
+    ]
+    draw.rounded_rectangle(button1_rect, radius=15, fill=(102, 126, 234), outline=(102, 126, 234), width=2)
+    
+    # 繪製按鈕文字（白色）
+    draw.text((button1_x, button_y), button1_text, fill=(255, 255, 255), font=font_button)
+    
+    # 按鈕 2：記得【今日讀經】進度
+    button2_y = button_y + button1_height + 30
+    button2_text = "✅ 記得【今日讀經】進度"
+    bbox2 = draw.textbbox((0, 0), button2_text, font=font_button)
+    button2_width = bbox2[2] - bbox2[0]
+    button2_height = bbox2[3] - bbox2[1]
+    button2_x = (IMAGE_WIDTH - button2_width) // 2
+    
+    # 繪製按鈕背景（圓角矩形）
+    button2_rect = [
+        button2_x - 20, 
+        button2_y - 10, 
+        button2_x + button2_width + 20, 
+        button2_y + button2_height + 10
+    ]
+    draw.rounded_rectangle(button2_rect, radius=15, fill=(34, 197, 94), outline=(34, 197, 94), width=2)
+    
+    # 繪製按鈕文字（白色）
+    draw.text((button2_x, button2_y), button2_text, fill=(255, 255, 255), font=font_button)
     
     # 儲存圖片
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
