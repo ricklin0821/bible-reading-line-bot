@@ -294,76 +294,19 @@ def generate_devotional_image(
             draw.text((content_margin_x, y), line, fill=(75, 85, 99), font=font_content)
             y += 42
     
-    # 8. 底部按鈕樣式提醒（兩個醒目的按鈕）
-    button_y = IMAGE_HEIGHT - card_margin - 150
+    # 8. 底部提示文字（簡潔版）
+    # 因為會在 LINE 上加上真正可點擊的 Quick Reply 按鈕
+    hint_y = IMAGE_HEIGHT - card_margin - 80
+    hint_text = "↓ 點擊下方按鈕了解更多 ↓"
     
-    # 載入按鈕字型（較大、較粗）
-    try:
-        if FONT_BOLD_PATH:
-            font_button = ImageFont.truetype(FONT_BOLD_PATH, 32)
-        else:
-            font_button = font_content
-    except:
-        font_button = font_content
+    bbox_hint = draw.textbbox((0, 0), hint_text, font=font_content)
+    hint_width = bbox_hint[2] - bbox_hint[0]
+    hint_x = (IMAGE_WIDTH - hint_width) // 2
     
-    # 按鈕 1：點擊【荒漠甘泉】讀全文
-    button1_text = "▶ 點擊【荒漠甘泉】讀全文"
-    bbox1 = draw.textbbox((0, 0), button1_text, font=font_button)
-    button1_width = bbox1[2] - bbox1[0]
-    button1_height = bbox1[3] - bbox1[1]
-    button1_x = (IMAGE_WIDTH - button1_width) // 2
+    # 繪製提示文字（深藍色）
+    draw.text((hint_x, hint_y), hint_text, fill=(102, 126, 234), font=font_content)
     
-    # 繪製按鈕陰影
-    button_padding = 25
-    shadow_offset = 4
-    button_shadow = [
-        button1_x - button_padding + shadow_offset,
-        button_y - button_padding // 2 + shadow_offset,
-        button1_x + button1_width + button_padding + shadow_offset,
-        button_y + button1_height + button_padding // 2 + shadow_offset
-    ]
-    draw.rounded_rectangle(button_shadow, radius=30, fill=(80, 100, 200, 50))
-    
-    # 繪製按鈕背景（藍色）
-    button_rect = [
-        button1_x - button_padding,
-        button_y - button_padding // 2,
-        button1_x + button1_width + button_padding,
-        button_y + button1_height + button_padding // 2
-    ]
-    draw.rounded_rectangle(button_rect, radius=30, fill=(102, 126, 234))
-    
-    # 繪製按鈕文字（白色、加粗）
-    draw.text((button1_x, button_y), button1_text, fill=(255, 255, 255), font=font_button)
-    
-    # 按鈕 2：記得【今日讀經】進度
-    button2_y = button_y + button1_height + 35
-    button2_text = "◆ 記得【今日讀經】進度"
-    bbox2 = draw.textbbox((0, 0), button2_text, font=font_button)
-    button2_width = bbox2[2] - bbox2[0]
-    button2_height = bbox2[3] - bbox2[1]
-    button2_x = (IMAGE_WIDTH - button2_width) // 2
-    
-    # 繪製按鈕陰影
-    button2_shadow = [
-        button2_x - button_padding + shadow_offset,
-        button2_y - button_padding // 2 + shadow_offset,
-        button2_x + button2_width + button_padding + shadow_offset,
-        button2_y + button2_height + button_padding // 2 + shadow_offset
-    ]
-    draw.rounded_rectangle(button2_shadow, radius=30, fill=(40, 180, 120, 50))
-    
-    # 繪製按鈕背景（綠色）
-    button2_rect = [
-        button2_x - button_padding,
-        button2_y - button_padding // 2,
-        button2_x + button2_width + button_padding,
-        button2_y + button2_height + button_padding // 2
-    ]
-    draw.rounded_rectangle(button2_rect, radius=30, fill=(52, 211, 153))
-    
-    # 繪製按鈕文字（白色、加粗）
-    draw.text((button2_x, button2_y), button2_text, fill=(255, 255, 255), font=font_button)# 儲存圖片
+    # 儲存圖片
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"devotional_{month:02d}{day:02d}_{timestamp}.png"
     filepath = os.path.join(SAVE_DIR, filename)

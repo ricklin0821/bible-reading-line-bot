@@ -1399,7 +1399,9 @@ async def trigger_daily_devotional(request: Request):
                 base_url = os.environ.get('BASE_URL', 'https://bible-bot-741437082833.asia-east1.run.app')
                 image_url = f"{base_url}/devotional_images/{image_filename}"
                 
-                # 發送圖片
+                # 發送圖片（加上 Quick Reply 按鈕）
+                from linebot.v3.messaging.models import QuickReply, QuickReplyItem, MessageAction
+                
                 messaging_api.push_message(
                     PushMessageRequest(
                         to=user.user_id,
@@ -1407,7 +1409,23 @@ async def trigger_daily_devotional(request: Request):
                             TextMessage(text="🌅 中午好！今天的荒漠甘泉："),
                             ImageMessage(
                                 original_content_url=image_url,
-                                preview_image_url=image_url
+                                preview_image_url=image_url,
+                                quick_reply=QuickReply(
+                                    items=[
+                                        QuickReplyItem(
+                                            action=MessageAction(
+                                                label="📖 讀全文",
+                                                text="荒漠甘泉"
+                                            )
+                                        ),
+                                        QuickReplyItem(
+                                            action=MessageAction(
+                                                label="📝 今日讀經",
+                                                text="今日讀經"
+                                            )
+                                        )
+                                    ]
+                                )
                             )
                         ]
                     )
