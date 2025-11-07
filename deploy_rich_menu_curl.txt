@@ -1,0 +1,81 @@
+# Rich Menu 部署指令 (使用 curl - Windows/Mac/Linux 通用)
+# 複製以下指令到 PowerShell 或 Terminal 執行
+
+# ========================================
+# 設定 Token (請替換成您的實際 Token)
+# ========================================
+$token = "YOUR_CHANNEL_ACCESS_TOKEN"
+
+# ========================================
+# 步驟 1: 創建 Rich Menu
+# ========================================
+Write-Host "Creating Rich Menu..." -ForegroundColor Yellow
+
+$response = curl -s -X POST https://api.line.me/v2/bot/richmenu `
+  -H "Authorization: Bearer $token" `
+  -H "Content-Type: application/json" `
+  -d '{
+    "size": {"width": 2500, "height": 1686},
+    "selected": true,
+    "name": "Bible Reading Bot Menu",
+    "chatBarText": "Bible Menu",
+    "areas": [
+      {"bounds": {"x": 0, "y": 0, "width": 1250, "height": 562}, "action": {"type": "message", "text": "Today Reading"}},
+      {"bounds": {"x": 1250, "y": 0, "width": 1250, "height": 562}, "action": {"type": "message", "text": "Devotional"}},
+      {"bounds": {"x": 0, "y": 562, "width": 1250, "height": 562}, "action": {"type": "message", "text": "Report"}},
+      {"bounds": {"x": 1250, "y": 562, "width": 1250, "height": 562}, "action": {"type": "message", "text": "Progress"}},
+      {"bounds": {"x": 0, "y": 1124, "width": 1250, "height": 562}, "action": {"type": "message", "text": "Leaderboard"}},
+      {"bounds": {"x": 1250, "y": 1124, "width": 1250, "height": 562}, "action": {"type": "message", "text": "Menu"}}
+    ]
+  }'
+
+# 從回應中取得 Rich Menu ID
+$richMenuId = ($response | ConvertFrom-Json).richMenuId
+Write-Host "Rich Menu ID: $richMenuId" -ForegroundColor Green
+
+# ========================================
+# 步驟 2: 上傳圖片
+# ========================================
+Write-Host "Uploading image..." -ForegroundColor Yellow
+
+curl -X POST "https://api-data.line.me/v2/bot/richmenu/$richMenuId/content" `
+  -H "Authorization: Bearer $token" `
+  -H "Content-Type: image/png" `
+  --data-binary "@rich_menu.png"
+
+Write-Host "Image uploaded" -ForegroundColor Green
+
+# ========================================
+# 步驟 3: 設定為預設 Rich Menu
+# ========================================
+Write-Host "Setting as default..." -ForegroundColor Yellow
+
+curl -X POST "https://api.line.me/v2/bot/user/all/richmenu/$richMenuId" `
+  -H "Authorization: Bearer $token"
+
+Write-Host "Deployment completed!" -ForegroundColor Green
+Write-Host "Rich Menu ID: $richMenuId" -ForegroundColor Cyan
+
+# ========================================
+# 驗證部署
+# ========================================
+Write-Host "`nVerifying deployment..." -ForegroundColor Yellow
+curl -X GET "https://api.line.me/v2/bot/richmenu/list" `
+  -H "Authorization: Bearer $token"
+
+# ========================================
+# 按鈕觸發文字對應表
+# ========================================
+# 請在 main.py 中處理以下文字訊息:
+# - "Today Reading" -> 今日讀經
+# - "Devotional" -> 荒漠甘泉
+# - "Report" -> 回報讀經
+# - "Progress" -> 我的進度
+# - "Leaderboard" -> 排行榜
+# - "Menu" -> 選單
+
+# ========================================
+# 刪除 Rich Menu (如需回滾)
+# ========================================
+# curl -X DELETE "https://api.line.me/v2/bot/richmenu/$richMenuId" `
+#   -H "Authorization: Bearer $token"
