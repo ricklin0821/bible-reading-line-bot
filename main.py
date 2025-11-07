@@ -831,14 +831,32 @@ def handle_message(event):
             base_url = os.environ.get('BASE_URL', 'https://bible-bot-741437082833.asia-east1.run.app')
             image_url = f"{base_url}/devotional_images/{image_filename}"
             
-            # 使用 ImageMessage 傳送圖片
+            # 使用 ImageMessage 傳送圖片（加上 Quick Reply 按鈕）
+            from linebot.v3.messaging.models import QuickReply, QuickReplyItem, MessageAction
+            
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
                     messages=[
                         ImageMessage(
                             original_content_url=image_url,
-                            preview_image_url=image_url
+                            preview_image_url=image_url,
+                            quick_reply=QuickReply(
+                                items=[
+                                    QuickReplyItem(
+                                        action=MessageAction(
+                                            label="📖 讀全文",
+                                            text="荒漠甘泉"
+                                        )
+                                    ),
+                                    QuickReplyItem(
+                                        action=MessageAction(
+                                            label="📝 今日讀經",
+                                            text="今日讀經"
+                                        )
+                                    )
+                                ]
+                            )
                         )
                     ]
                 )
