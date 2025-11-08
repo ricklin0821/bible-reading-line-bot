@@ -22,6 +22,7 @@ from database import init_db, User, BiblePlan, BibleText
 from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text
 from scoring import add_reading_score, format_score_message
 from leaderboard import get_weekly_leaderboard, get_streak_leaderboard, get_newcomer_leaderboard, get_total_leaderboard, format_leaderboard_message, get_user_stats
+from group_manager import join_random_group, switch_group, remove_member_from_group, get_group_info, format_group_info_message, toggle_notification
 from api_routes import router as api_router
 from admin_routes import router as admin_router
 from admin_auth import router as admin_auth_router
@@ -559,6 +560,115 @@ def handle_message(event):
         )
         return
     
+    # 小組功能：加入小組
+    elif text in ["加入小組", "👥 加入小組", "小組"]:
+        display_name = user.get('display_name', '未知')
+        result = join_random_group(line_user_id, display_name)
+        
+        if result["success"]:
+            group_id = result["group_id"]
+            is_new = result.get("is_new_group", False)
+            
+            if is_new:
+                message_text = f"🎉 歡迎加入小組！\n\n您已成功創建並加入新小組！\n\n💡 小組功能：\n• 當組員完成讀經時，會通知其他成員\n• 可以在小組留言板互相鼓勵\n• 發送「小組資訊」查看成員\n• 發送「小組留言」進入留言模式"
+            else:
+                message_text = f"🎉 歡迎加入小組！\n\n您已成功加入小組！\n\n💡 小組功能：\n• 當組員完成讀經時，會通知其他成員\n• 可以在小組留言板互相鼓勵\n• 發送「小組資訊」查看成員\n• 發送「小組留言」進入留言模式"
+        else:
+            message_text = result.get("message", "加入小組失敗，請稍後再試")
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    # 小組功能：小組資訊
+    elif text in ["小組資訊", "👥 小組資訊", "我的小組"]:
+        group_id = user.get('group_id')
+        
+        if not group_id:
+            message_text = "您還沒有加入小組！\n\n發送「加入小組」即可隨機加入小組，與其他讀經夥伴一起成長！"
+        else:
+            message_text = format_group_info_message(group_id)
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    # 小組功能：換組
+    elif text in ["換組", "🔄 換組", "隨機換組"]:
+        display_name = user.get('display_name', '未知')
+        result = switch_group(line_user_id, display_name)
+        
+        if result["success"]:
+            message_text = f"✅ 換組成功！\n\n您已加入新的小組！\n\n發送「小組資訊」查看新組員"
+        else:
+            message_text = result.get("message", "換組失敗，請稍後再試")
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    # 小組功能：離開小組
+    elif text in ["離開小組", "退出小組"]:
+        success = remove_member_from_group(line_user_id)
+        
+        if success:
+            message_text = "👋 您已離開小組\n\n隨時都可以發送「加入小組」重新加入！"
+        else:
+            message_text = "您目前不在任何小組中"
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    # 小組功能：通知設定
+    elif text in ["小組通知開啟", "開啟小組通知"]:
+        success = toggle_notification(line_user_id, True)
+        
+        if success:
+            message_text = "🔔 小組通知已開啟\n\n當組員完成讀經時，您會收到通知！"
+        else:
+            message_text = "您目前不在任何小組中"
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    elif text in ["小組通知關閉", "關閉小組通知"]:
+        success = toggle_notification(line_user_id, False)
+        
+        if success:
+            message_text = "🔕 小組通知已關閉\n\n您將不會收到組員完成讀經的通知"
+        else:
+            message_text = "您目前不在任何小組中"
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
     # 選單 (Menu) - 與幫助相同
     elif text in ["Menu", "選單"]:
         menu_text = (
@@ -573,6 +683,11 @@ def handle_message(event):
             "• ✅ 回報讀經 - 開始讀經測驗\n"
             "• 📊 我的積分 - 查看個人統計\n"
             "• 🏆 排行榜 - 查看各類排行榜\n\n"
+            "👥 小組功能：\n"
+            "• 加入小組 - 隨機加入讀經小組\n"
+            "• 小組資訊 - 查看小組成員\n"
+            "• 小組留言 - 與組員互動\n"
+            "• 換組 - 隨機換到新小組\n\n"
             "⚙️ 其他功能：\n"
             "• 📖 荒漠甘泉圖片 - 生成靈修分享圖\n"
             "• 🔒 隱私設定 - 設定排行榜顯示\n"
@@ -1076,6 +1191,11 @@ def handle_message(event):
             "• ✅ 回報讀經 - 開始讀經測驗\n"
             "• 📊 我的積分 - 查看個人統計\n"
             "• 🏆 排行榜 - 查看各類排行榜\n\n"
+            "👥 小組功能：\n"
+            "• 加入小組 - 隨機加入讀經小組\n"
+            "• 小組資訊 - 查看小組成員\n"
+            "• 小組留言 - 與組員互動\n"
+            "• 換組 - 隨機換到新小組\n\n"
             "⚙️ 其他功能：\n"
             "• 📖 荒漠甘泉圖片 - 生成靈修分享圖\n"
             "• 🔒 隱私設定 - 設定排行榜顯示\n"
