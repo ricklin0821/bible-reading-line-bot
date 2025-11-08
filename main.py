@@ -1649,6 +1649,9 @@ async def trigger_daily_devotional(request: Request):
             QuickReply, QuickReplyItem, MessageAction
         )
         
+        # 初始化 messaging_api
+        messaging_api: MessagingApi = next(get_messaging_api())
+        
         # 獲取所有使用者
         users = User.get_all()
         
