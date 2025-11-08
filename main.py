@@ -1646,7 +1646,7 @@ async def trigger_daily_devotional(request: Request):
         from daily_verse import generate_devotional_share_image
         
         # 獲取所有使用者
-        users = User.get_all_users()
+        users = User.get_all()
         
         print(f"開始發送每日荒漠甘泉圖片給 {len(users)} 位使用者...")
         

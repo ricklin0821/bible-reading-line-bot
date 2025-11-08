@@ -1,0 +1,31 @@
+# 修正 Cloud Scheduler 的 URL
+
+## 問題
+Scheduler 使用的 URL 是 `/trigger/send-devotional-image`
+但實際的路由是 `/trigger/daily-devotional`
+
+## 解決方案
+
+### 方法 1: 更新 Scheduler 的 URL（推薦）
+
+```bash
+# 刪除舊的任務
+gcloud scheduler jobs delete daily-devotional-sender --location=asia-east1 --quiet
+
+# 創建新的任務（使用正確的 URL）
+gcloud scheduler jobs create http daily-devotional-sender --location=asia-east1 --schedule="30 12 * * *" --time-zone="Asia/Taipei" --uri="https://bible-bot-741437082833.asia-east1.run.app/trigger/daily-devotional" --http-method=POST --oidc-service-account-email=741437082833-compute@developer.gserviceaccount.com --oidc-token-audience=https://bible-bot-741437082833.asia-east1.run.app
+```
+
+### 方法 2: 在 main.py 中加入別名路由
+
+如果不想改 Scheduler，可以在 main.py 中加入：
+
+```python
+@app.post("/trigger/send-devotional-image")
+async def trigger_send_devotional_image(request: Request):
+    """別名路由，指向 daily-devotional"""
+    return await trigger_daily_devotional(request)
+```
+
+## 推薦使用方法 1
+因為路由名稱應該保持一致，避免混淆。
