@@ -1644,6 +1644,10 @@ async def trigger_daily_devotional(request: Request):
     """
     try:
         from daily_verse import generate_devotional_share_image
+        from linebot.v3.messaging.models import (
+            PushMessageRequest, TextMessage, ImageMessage,
+            QuickReply, QuickReplyItem, MessageAction
+        )
         
         # 獲取所有使用者
         users = User.get_all()
@@ -1659,7 +1663,7 @@ async def trigger_daily_devotional(request: Request):
                 image_path = generate_devotional_share_image(user)
                 
                 if not image_path:
-                    print(f"❌ 無法為使用者 {user.user_id} 生成圖片")
+                    print(f"❌ 無法為使用者 {user.line_user_id} 生成圖片")
                     fail_count += 1
                     continue
                 
@@ -1671,11 +1675,9 @@ async def trigger_daily_devotional(request: Request):
                 image_url = f"{base_url}/devotional_images/{image_filename}"
                 
                 # 發送圖片（加上 Quick Reply 按鈕）
-                from linebot.v3.messaging.models import QuickReply, QuickReplyItem, MessageAction
-                
                 messaging_api.push_message(
                     PushMessageRequest(
-                        to=user.user_id,
+                        to=user.line_user_id,
                         messages=[
                             TextMessage(text="🌅 中午好！今天的荒漠甘泉："),
                             ImageMessage(
@@ -1702,11 +1704,11 @@ async def trigger_daily_devotional(request: Request):
                     )
                 )
                 
-                print(f"✅ 成功發送給使用者 {user.user_id}")
+                print(f"✅ 成功發送給使用者 {user.line_user_id}")
                 success_count += 1
                 
             except Exception as e:
-                print(f"❌ 發送給使用者 {user.user_id} 失敗: {e}")
+                print(f"❌ 發送給使用者 {user.line_user_id} 失敗: {e}")
                 fail_count += 1
         
         result = {
