@@ -140,7 +140,8 @@ def remove_member_from_group(user_id: str) -> bool:
         bool: 是否成功移除
     """
     from database import User
-    user = User.get(user_id)
+    user_obj = User.get_by_line_id(user_id)
+    user = user_obj.to_dict() if user_obj else None
     
     if not user or not user.get("group_id"):
         print(f"⚠️ 使用者不在任何小組中: {user_id}")
@@ -192,7 +193,8 @@ def join_random_group(user_id: str, display_name: str) -> Dict:
     """
     # 先檢查使用者是否已在小組中
     from database import User
-    user = User.get(user_id)
+    user_obj = User.get_by_line_id(user_id)
+    user = user_obj.to_dict() if user_obj else None
     
     if user and user.get("group_id"):
         print(f"⚠️ 使用者已在小組中: {user.get('group_id')}")
@@ -294,7 +296,8 @@ def toggle_notification(user_id: str, enabled: bool) -> bool:
         bool: 是否成功切換
     """
     from database import User
-    user = User.get(user_id)
+    user_obj = User.get_by_line_id(user_id)
+    user = user_obj.to_dict() if user_obj else None
     
     if not user or not user.get("group_id"):
         print(f"⚠️ 使用者不在任何小組中: {user_id}")
