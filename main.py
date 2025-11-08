@@ -563,7 +563,7 @@ def handle_message(event):
     
     # 小組功能：加入小組
     elif text in ["加入小組", "👥 加入小組", "小組"]:
-        display_name = user.get('display_name', '未知')
+        display_name = user.display_name if user and user.display_name else '未知'
         result = join_random_group(line_user_id, display_name)
         
         if result["success"]:
@@ -587,7 +587,7 @@ def handle_message(event):
     
     # 小組功能：小組資訊
     elif text in ["小組資訊", "👥 小組資訊", "我的小組"]:
-        group_id = user.get('group_id')
+        group_id = user.group_id if user else None
         
         if not group_id:
             message_text = "您還沒有加入小組！\n\n發送「加入小組」即可隨機加入小組，與其他讀經夥伴一起成長！"
@@ -604,7 +604,7 @@ def handle_message(event):
     
     # 小組功能：換組
     elif text in ["換組", "🔄 換組", "隨機換組"]:
-        display_name = user.get('display_name', '未知')
+        display_name = user.display_name if user and user.display_name else '未知'
         result = switch_group(line_user_id, display_name)
         
         if result["success"]:
@@ -672,7 +672,7 @@ def handle_message(event):
     
     # 小組功能：小組留言（查看歷史訊息）
     elif text in ["小組留言", "💬 小組留言", "留言板"]:
-        group_id = user.get('group_id')
+        group_id = user.group_id if user else None
         
         if not group_id:
             message_text = "您還沒有加入小組！\n\n發送「加入小組」即可隨機加入小組"
@@ -691,7 +691,7 @@ def handle_message(event):
     
     # 小組功能：查看留言歷史
     elif text in ["留言歷史", "查看留言"]:
-        group_id = user.get('group_id')
+        group_id = user.group_id if user else None
         
         if not group_id:
             message_text = "您還沒有加入小組！"

@@ -206,7 +206,7 @@ def get_daily_devotional_message(user: User) -> FlexMessage:
                     color="#667eea",
                     action=MessageAction(
                         label="開始今日讀經",
-                        text="選單"
+                        text="今日讀經"
                     ),
                     height="sm"
                 )
