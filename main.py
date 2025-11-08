@@ -23,6 +23,7 @@ from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_dail
 from scoring import add_reading_score, format_score_message
 from leaderboard import get_weekly_leaderboard, get_streak_leaderboard, get_newcomer_leaderboard, get_total_leaderboard, format_leaderboard_message, get_user_stats
 from group_manager import join_random_group, switch_group, remove_member_from_group, get_group_info, format_group_info_message, toggle_notification
+from group_notification import notify_group_members, save_group_message, get_group_messages, format_group_messages
 from api_routes import router as api_router
 from admin_routes import router as admin_router
 from admin_auth import router as admin_auth_router
@@ -669,6 +670,43 @@ def handle_message(event):
         )
         return
     
+    # 小組功能：小組留言（查看歷史訊息）
+    elif text in ["小組留言", "💬 小組留言", "留言板"]:
+        group_id = user.get('group_id')
+        
+        if not group_id:
+            message_text = "您還沒有加入小組！\n\n發送「加入小組」即可隨機加入小組"
+        else:
+            # 進入留言模式
+            User.update(line_user_id, {'group_message_state': 'WRITING'})
+            message_text = "📝 已進入小組留言模式\n\n請輸入您想說的話，將會發送給所有小組成員\n\n發送「取消」離開留言模式"
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
+    # 小組功能：查看留言歷史
+    elif text in ["留言歷史", "查看留言"]:
+        group_id = user.get('group_id')
+        
+        if not group_id:
+            message_text = "您還沒有加入小組！"
+        else:
+            messages = get_group_messages(group_id, limit=10)
+            message_text = format_group_messages(messages)
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=message_text)]
+            )
+        )
+        return
+    
     # 選單 (Menu) - 與幫助相同
     elif text in ["Menu", "選單"]:
         menu_text = (
@@ -706,6 +744,75 @@ def handle_message(event):
         )
         return
 
+    # --- 處理小組留言模式 ---
+    if user.get('group_message_state') == 'WRITING':
+        # 取消留言
+        if text in ["取消", "離開", "退出"]:
+            User.update(line_user_id, {'group_message_state': 'IDLE'})
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text="✅ 已離開留言模式")]
+                )
+            )
+            return
+        
+        # 發送留言給小組成員
+        group_id = user.get('group_id')
+        if not group_id:
+            User.update(line_user_id, {'group_message_state': 'IDLE'})
+            messaging_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text="您不在任何小組中")]
+                )
+            )
+            return
+        
+        display_name = user.get('display_name', '未知')
+        
+        # 儲存留言
+        save_group_message(
+            group_id=group_id,
+            user_id=line_user_id,
+            display_name=display_name,
+            message_type="text",
+            content=text
+        )
+        
+        # 通知其他小組成員
+        from group_manager import get_group_members
+        members = get_group_members(group_id)
+        notification_text = f"💬 小組留言\n\n{display_name}：\n{text}"
+        
+        sent_count = 0
+        for member in members:
+            member_user_id = member.get("user_id")
+            if member_user_id == line_user_id:
+                continue
+            
+            try:
+                messaging_api.push_message(
+                    PushMessageRequest(
+                        to=member_user_id,
+                        messages=[TextMessage(text=notification_text)]
+                    )
+                )
+                sent_count += 1
+            except Exception as e:
+                print(f"❗ 發送留言通知失敗: {e}")
+        
+        # 清除狀態
+        User.update(line_user_id, {'group_message_state': 'IDLE'})
+        
+        messaging_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=f"✅ 留言已發送給 {sent_count} 位小組成員！")]
+            )
+        )
+        return
+    
     # --- 處理「聯繫作者」功能 ---
     if text == "聯繫作者":
         # 記錄使用者狀態為等待輸入 EMAIL
@@ -1112,6 +1219,16 @@ def handle_message(event):
             # 將計分結果加入回覆訊息（包含總積分和排名）
             score_message = format_score_message(scoring_result, user)
             reply_messages.append(TextMessage(text=score_message))
+            
+            # 小組通知：如果使用者在小組中，通知其他成員
+            group_id = user.get('group_id')
+            if group_id:
+                display_name = user.get('display_name', '未知')
+                try:
+                    notify_count = notify_group_members(line_user_id, group_id, display_name, messaging_api)
+                    print(f"[DEBUG] 已通知 {notify_count} 位小組成員")
+                except Exception as e:
+                    print(f"[ERROR] 小組通知失敗: {e}")
         else:
             user.save() 
             
