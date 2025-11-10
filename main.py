@@ -678,7 +678,7 @@ def handle_message(event):
             message_text = "您還沒有加入小組！\n\n發送「加入小組」即可隨機加入小組"
         else:
             # 進入留言模式
-            User.update(line_user_id, {'group_message_state': 'WRITING'})
+            User.update(line_user_id, group_message_state='WRITING')
             message_text = "📝 已進入小組留言模式\n\n請輸入您想說的話，將會發送給所有小組成員\n\n發送「取消」離開留言模式"
         
         messaging_api.reply_message(
@@ -748,7 +748,7 @@ def handle_message(event):
     if user.get('group_message_state') == 'WRITING':
         # 取消留言
         if text in ["取消", "離開", "退出"]:
-            User.update(line_user_id, {'group_message_state': 'IDLE'})
+            User.update(line_user_id, group_message_state='IDLE')
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -760,7 +760,7 @@ def handle_message(event):
         # 發送留言給小組成員
         group_id = user.get('group_id')
         if not group_id:
-            User.update(line_user_id, {'group_message_state': 'IDLE'})
+            User.update(line_user_id, group_message_state='IDLE')
             messaging_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -803,7 +803,7 @@ def handle_message(event):
                 print(f"❗ 發送留言通知失敗: {e}")
         
         # 清除狀態
-        User.update(line_user_id, {'group_message_state': 'IDLE'})
+        User.update(line_user_id, group_message_state='IDLE')
         
         messaging_api.reply_message(
             ReplyMessageRequest(
@@ -1368,6 +1368,8 @@ async def handle_webhook(request: Request):
         raise e
     except Exception as e:
         print(f"Exception: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
     return "OK"

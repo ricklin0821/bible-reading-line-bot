@@ -119,11 +119,11 @@ def add_member_to_group(group_id: str, user_id: str, display_name: str) -> bool:
     
     # 更新使用者資料
     from database import User
-    User.update(user_id, {
-        "group_id": group_id,
-        "group_notification_enabled": True,
-        "joined_group_at": datetime.now().isoformat()
-    })
+    User.update(user_id,
+        group_id=group_id,
+        group_notification_enabled=True,
+        joined_group_at=datetime.now().isoformat()
+    )
     
     print(f"✅ 使用者 {display_name} 加入小組 {group_id}")
     return True
@@ -170,11 +170,11 @@ def remove_member_from_group(user_id: str) -> bool:
         group_ref.set(group_data)
     
     # 更新使用者資料
-    User.update(user_id, {
-        "group_id": None,
-        "group_notification_enabled": False,
-        "joined_group_at": None
-    })
+    User.update(user_id,
+        group_id=None,
+        group_notification_enabled=False,
+        joined_group_at=None
+    )
     
     print(f"✅ 使用者 {user_id} 離開小組 {group_id}")
     return True
@@ -306,9 +306,9 @@ def toggle_notification(user_id: str, enabled: bool) -> bool:
     group_id = user["group_id"]
     
     # 更新使用者的通知設定
-    User.update(user_id, {
-        "group_notification_enabled": enabled
-    })
+    User.update(user_id,
+        group_notification_enabled=enabled
+    )
     
     # 更新小組中的成員資料
     group_ref = db.collection("groups").document(group_id)
