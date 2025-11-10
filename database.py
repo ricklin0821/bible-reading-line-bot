@@ -47,6 +47,10 @@ class UserObject:
         """支援 user['field'] = value 語法"""
         self._data[key] = value
     
+    def to_dict(self):
+        """返回字典格式的使用者資料"""
+        return self._data.copy()
+    
     def save(self):
         """儲存變更到 Firestore"""
         if not self._id:
