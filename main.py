@@ -1379,6 +1379,21 @@ def read_root():
     """根路由，顯示讀經計畫首頁"""
     return FileResponse("static/index.html", media_type="text/html")
 
+@app.get("/admin/login")
+def admin_login():
+    """管理後台登入頁面"""
+    return FileResponse("static/admin/login.html", media_type="text/html")
+
+@app.get("/admin/dashboard")
+def admin_dashboard():
+    """管理後台儀表板"""
+    return FileResponse("static/admin/dashboard.html", media_type="text/html")
+
+@app.get("/admin/groups")
+def admin_groups():
+    """小組管理頁面"""
+    return FileResponse("static/admin/groups.html", media_type="text/html")
+
 # --- 排程任務 (用於每日推送) ---
 
 @app.post("/schedule/daily_push/{push_time}")
