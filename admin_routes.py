@@ -401,3 +401,181 @@ def reset_user_progress(line_user_id: str, admin: str = Depends(verify_admin)):
             "quiz_state": user.quiz_state
         }
     }
+
+
+# --- 小組管理 API ---
+
+@router.get("/groups")
+def get_all_groups(admin: str = Depends(verify_admin)):
+    """取得所有小組列表"""
+    groups_ref = db.collection("groups")
+    groups = list(groups_ref.stream())
+    
+    groups_list = []
+    for group_doc in groups:
+        group_data = group_doc.to_dict()
+        
+        # 轉換創建時間
+        created_at = group_data.get('created_at', '')
+        if isinstance(created_at, datetime):
+            created_at = created_at.isoformat()
+        
+        group_info = {
+            "group_id": group_data.get('group_id'),
+            "member_count": group_data.get('member_count', 0),
+            "max_members": group_data.get('max_members', 6),
+            "is_full": group_data.get('is_full', False),
+            "created_at": created_at,
+            "members": group_data.get('members', [])
+        }
+        
+        groups_list.append(group_info)
+    
+    # 按成員數量排序
+    groups_list.sort(key=lambda x: x['member_count'], reverse=True)
+    
+    return {
+        "total": len(groups_list),
+        "groups": groups_list
+    }
+
+@router.get("/groups/{group_id}")
+def get_group_detail(group_id: str, admin: str = Depends(verify_admin)):
+    """取得小組詳細資料"""
+    groups_ref = db.collection("groups")
+    group_doc = groups_ref.document(group_id).get()
+    
+    if not group_doc.exists:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    group_data = group_doc.to_dict()
+    
+    # 轉換創建時間
+    created_at = group_data.get('created_at', '')
+    if isinstance(created_at, datetime):
+        created_at = created_at.isoformat()
+    
+    # 取得小組留言
+    messages_ref = db.collection("group_messages")
+    query = messages_ref.where("group_id", "==", group_id).order_by("created_at", direction="DESCENDING").limit(20)
+    
+    messages = []
+    for msg_doc in query.stream():
+        msg_data = msg_doc.to_dict()
+        created_at_msg = msg_data.get('created_at', '')
+        if isinstance(created_at_msg, datetime):
+            created_at_msg = created_at_msg.isoformat()
+        
+        messages.append({
+            "display_name": msg_data.get('display_name', '未知'),
+            "content": msg_data.get('content', ''),
+            "message_type": msg_data.get('message_type', 'text'),
+            "created_at": created_at_msg
+        })
+    
+    return {
+        "group_id": group_data.get('group_id'),
+        "member_count": group_data.get('member_count', 0),
+        "max_members": group_data.get('max_members', 6),
+        "is_full": group_data.get('is_full', False),
+        "created_at": created_at,
+        "members": group_data.get('members', []),
+        "messages": messages
+    }
+
+@router.get("/groups/stats/overview")
+def get_groups_stats(admin: str = Depends(verify_admin)):
+    """取得小組統計資料"""
+    groups_ref = db.collection("groups")
+    groups = list(groups_ref.stream())
+    
+    total_groups = len(groups)
+    total_members = 0
+    full_groups = 0
+    
+    member_distribution = {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0
+    }
+    
+    for group_doc in groups:
+        group_data = group_doc.to_dict()
+        member_count = group_data.get('member_count', 0)
+        total_members += member_count
+        
+        if group_data.get('is_full', False):
+            full_groups += 1
+        
+        if str(member_count) in member_distribution:
+            member_distribution[str(member_count)] += 1
+    
+    avg_members = total_members / total_groups if total_groups > 0 else 0
+    
+    # 取得小組留言總數
+    messages_ref = db.collection("group_messages")
+    total_messages = len(list(messages_ref.stream()))
+    
+    return {
+        "total_groups": total_groups,
+        "total_members": total_members,
+        "full_groups": full_groups,
+        "avg_members_per_group": round(avg_members, 1),
+        "member_distribution": member_distribution,
+        "total_messages": total_messages
+    }
+
+@router.get("/export/groups")
+def export_groups_csv(admin: str = Depends(verify_admin)):
+    """匯出所有小組資料為 CSV"""
+    groups_ref = db.collection("groups")
+    groups = list(groups_ref.stream())
+    
+    # 建立 CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 寫入標題
+    writer.writerow([
+        '小組 ID',
+        '成員數量',
+        '最大成員數',
+        '是否已滿',
+        '創建時間',
+        '成員列表'
+    ])
+    
+    # 寫入資料
+    for group_doc in groups:
+        group_data = group_doc.to_dict()
+        
+        # 轉換創建時間
+        created_at = group_data.get('created_at', '')
+        if isinstance(created_at, datetime):
+            created_at = created_at.isoformat()
+        
+        # 成員列表
+        members = group_data.get('members', [])
+        member_names = ', '.join([m.get('display_name', '未知') for m in members])
+        
+        writer.writerow([
+            group_data.get('group_id', ''),
+            group_data.get('member_count', 0),
+            group_data.get('max_members', 6),
+            '是' if group_data.get('is_full', False) else '否',
+            created_at,
+            member_names
+        ])
+    
+    # 準備回應
+    output.seek(0)
+    return Response(
+        content=output.getvalue().encode('utf-8-sig'),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=bible_bot_groups_{datetime.now().strftime('%Y%m%d')}.csv"
+        }
+    )
