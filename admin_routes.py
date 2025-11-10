@@ -455,23 +455,34 @@ def get_group_detail(group_id: str, admin: str = Depends(verify_admin)):
     if isinstance(created_at, datetime):
         created_at = created_at.isoformat()
     
-    # 取得小組留言
+    # 取得小組留言（先查詢所有，再在程式中排序以避免需要索引）
     messages_ref = db.collection("group_messages")
-    query = messages_ref.where("group_id", "==", group_id).order_by("created_at", direction="DESCENDING").limit(20)
+    query = messages_ref.where("group_id", "==", group_id)
     
     messages = []
     for msg_doc in query.stream():
         msg_data = msg_doc.to_dict()
         created_at_msg = msg_data.get('created_at', '')
-        if isinstance(created_at_msg, datetime):
-            created_at_msg = created_at_msg.isoformat()
         
         messages.append({
             "display_name": msg_data.get('display_name', '未知'),
             "content": msg_data.get('content', ''),
             "message_type": msg_data.get('message_type', 'text'),
-            "created_at": created_at_msg
+            "created_at": created_at_msg,
+            "created_at_iso": created_at_msg.isoformat() if isinstance(created_at_msg, datetime) else created_at_msg
         })
+    
+    # 在程式中排序並限制數量
+    messages.sort(key=lambda x: x['created_at'] if isinstance(x['created_at'], datetime) else datetime.min, reverse=True)
+    messages = messages[:20]
+    
+    # 轉換時間格式
+    for msg in messages:
+        if isinstance(msg['created_at'], datetime):
+            msg['created_at'] = msg['created_at'].isoformat()
+        else:
+            msg['created_at'] = msg.get('created_at_iso', '')
+        msg.pop('created_at_iso', None)
     
     return {
         "group_id": group_data.get('group_id'),
