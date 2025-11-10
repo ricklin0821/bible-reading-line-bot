@@ -1389,8 +1389,8 @@ def admin_dashboard():
     """管理後台儀表板"""
     return FileResponse("static/admin/dashboard.html", media_type="text/html")
 
-@app.get("/admin/groups")
-def admin_groups():
+@app.get("/admin/groups-management")
+def admin_groups_management():
     """小組管理頁面"""
     return FileResponse("static/admin/groups.html", media_type="text/html")
 
