@@ -85,3 +85,7 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+
+# Untracked files from user request
+bible-reading-line-bot/
+zip.zip
