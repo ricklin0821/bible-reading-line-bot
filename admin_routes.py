@@ -234,9 +234,9 @@ def get_group_stats(admin: str = Depends(verify_admin)):
         
     avg_members_per_group = round(total_members / total_groups, 1) if total_groups > 0 else 0
     
-    # This is an expensive operation, so we will return a placeholder for now.
-    # Consider creating a counter document in Firestore to optimize this in the future.
-    messages_count = -1
+    # Count all messages in the 'group_messages' collection group
+    messages_query = db.collection_group('group_messages').stream()
+    messages_count = len(list(messages_query))
 
     return {
         "total_groups": total_groups,
@@ -360,7 +360,7 @@ def get_all_group_messages(admin: str = Depends(verify_admin)):
     """取得所有小組的所有留言"""
     try:
         # Removed .order_by() to avoid index dependency, will sort in Python
-        messages_ref = db.collection_group('group_messages').limit(200)
+        messages_ref = db.collection_group('group_messages').limit(500)
         messages_stream = list(messages_ref.stream())
 
         group_ids = set()
