@@ -21,6 +21,27 @@ def generate_group_id() -> str:
     return f"group_{timestamp}_{random_suffix}"
 
 
+def generate_group_name() -> str:
+    """生成一個有聖經意涵的小組名稱"""
+    adjectives = ["信實", "喜樂", "和平", "恩典", "溫柔", "良善", "聖潔", "光明", "得勝", "蒙福", "讚美", "永恆", "盼望", "仁愛"]
+    nouns = ["溪水旁", "磐石", "燈塔", "橄欖樹", "葡萄樹", "芥菜種", "羊圈", "聖殿", "迦南", "錫安", "活水泉", "避難所"]
+    
+    # 40% 的機率是 "形容詞 + 小組", 60% 的機率是 "名詞 + 小組"
+    if random.random() < 0.4:
+        name = f"{random.choice(adjectives)}小組"
+    else:
+        name = f"{random.choice(nouns)}小組"
+        
+    # 檢查名稱是否重複 (簡易版)
+    groups_ref = db.collection("groups")
+    query = groups_ref.where("group_name", "==", name).limit(1)
+    if len(list(query.stream())) > 0:
+        # 如果重複，加上一個數字後綴再試
+        return f"{name}{random.randint(2, 9)}"
+        
+    return name
+
+
 def create_group() -> str:
     """
     創建新小組
@@ -29,9 +50,11 @@ def create_group() -> str:
         str: 新創建的小組 ID
     """
     group_id = generate_group_id()
+    group_name = generate_group_name()
     
     group_data = {
         "group_id": group_id,
+        "group_name": group_name,
         "created_at": datetime.now().isoformat(),
         "member_count": 0,
         "max_members": MAX_GROUP_MEMBERS,
@@ -42,7 +65,7 @@ def create_group() -> str:
     # 儲存到 Firestore
     db.collection("groups").document(group_id).set(group_data)
     
-    print(f"✅ 創建新小組: {group_id}")
+    print(f"✅ 創建新小組: {group_name} ({group_id})")
     return group_id
 
 

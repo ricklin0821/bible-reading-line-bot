@@ -18,16 +18,17 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent, PostbackEvent
 
+from api_routes import router as api_router
+from admin_routes import router as admin_router
+from admin_auth import router as admin_auth_router
+from preview_routes import router as preview_router
+
 from database import init_db, User, BiblePlan, BibleText
 from quiz_generator import generate_quiz_for_user, process_quiz_answer, get_daily_reading_text
 from scoring import add_reading_score, format_score_message
 from leaderboard import get_weekly_leaderboard, get_streak_leaderboard, get_newcomer_leaderboard, get_total_leaderboard, format_leaderboard_message, get_user_stats
 from group_manager import join_random_group, switch_group, remove_member_from_group, get_group_info, format_group_info_message, toggle_notification
 from group_notification import notify_group_members, save_group_message, get_group_messages, format_group_messages
-from api_routes import router as api_router
-from admin_routes import router as admin_router
-from admin_auth import router as admin_auth_router
-from preview_routes import router as preview_router
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -1393,6 +1394,11 @@ def admin_dashboard():
 def admin_groups_management():
     """小組管理頁面"""
     return FileResponse("static/admin/groups.html", media_type="text/html")
+
+@app.get("/admin/group-messages")
+def admin_group_messages():
+    """小組留言總覽頁面"""
+    return FileResponse("static/admin/group-messages.html", media_type="text/html")
 
 # --- 排程任務 (用於每日推送) ---
 

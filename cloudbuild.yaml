@@ -2,7 +2,7 @@ steps:
   # 步驟 1: 建置 Docker 映像檔
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-image'
-    args: ['build', '-t', 'gcr.io/bible-bot-project/bible-bot:$SHORT_SHA', '-t', 'gcr.io/bible-bot-project/bible-bot:latest', '.']
+    args: ['build', '-t', 'gcr.io/bible-bot-project/bible-bot:$BUILD_ID', '-t', 'gcr.io/bible-bot-project/bible-bot:latest', '.']
   
   # 步驟 2: 推送映像檔到 Container Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -17,12 +17,11 @@ steps:
       - 'run'
       - 'deploy'
       - 'bible-bot'
-      - '--image=gcr.io/bible-bot-project/bible-bot:$SHORT_SHA'
+      - '--image=gcr.io/bible-bot-project/bible-bot:$BUILD_ID'
       - '--platform=managed'
       - '--region=asia-east1'
       - '--allow-unauthenticated'
       - '--quiet'
-      - '--tag=$SHORT_SHA'
     waitFor: ['push-image']
   
   # 步驟 4: 驗證部署（健康檢查）
@@ -37,24 +36,6 @@ steps:
       - '%{http_code}'
       - 'https://bible-bot-741437082833.asia-east1.run.app/'
     waitFor: ['deploy-cloud-run']
-
-images:
-  - 'gcr.io/bible-bot-project/bible-bot:$SHORT_SHA'
-  - 'gcr.io/bible-bot-project/bible-bot:latest'
-
-# 替代變數
-substitutions:
-  _SERVICE_NAME: 'bible-bot'
-  _REGION: 'asia-east1'
-
-# 建置選項
-options:
-  logging: CLOUD_LOGGING_ONLY
-  machineType: 'E2_HIGHCPU_8'
-  # 失敗時記錄詳細資訊
-  logStreamingOption: STREAM_ON
-  # 動態替換
-  substitutionOption: ALLOW_LOOSE
 
 # 逾時設定
 timeout: '1200s'

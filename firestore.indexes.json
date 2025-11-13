@@ -31,6 +31,34 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "show_in_leaderboard",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "current_streak",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "show_in_leaderboard",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "week_score",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

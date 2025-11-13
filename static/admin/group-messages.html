@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小組留言總覽 - Bible Bot 管理後台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 16px;
+            color: #64748b;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .search-box {
+            padding: 10px 16px;
+            font-size: 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 24px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .group-accordion details {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 16px;
+            transition: all 0.3s;
+        }
+
+        .group-accordion details[open] {
+            box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+        }
+
+        .group-accordion summary {
+            padding: 24px 32px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .group-accordion summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .group-accordion summary .group-id {
+            font-family: 'Courier New', monospace;
+        }
+
+        .group-accordion summary .message-count {
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .messages-container {
+            padding: 0 32px 32px 32px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .message-item {
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .message-item:last-child {
+            border-bottom: none;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .message-author {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 14px;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .message-content {
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #94a3b8;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f1f5f9;
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 40px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💬 小組留言總覽</h1>
+            <p>查看所有小組的留言內容，新的留言會顯示在最上方</p>
+            <div class="header-actions">
+                <a href="/admin/groups-management" class="btn btn-secondary">← 返回小組管理</a>
+                <button class="btn btn-primary" onclick="loadMessages()">🔄 重新整理</button>
+            </div>
+        </div>
+
+        <input type="text" class="search-box" id="searchBox" placeholder="搜尋小組 ID 或留言內容...">
+
+        <div class="group-accordion" id="accordionContainer">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>載入中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allMessages = {};
+        const authToken = sessionStorage.getItem('adminAuth');
+
+        if (!authToken) {
+            window.location.href = '/admin/login';
+        }
+
+        async function loadMessages() {
+            const container = document.getElementById('accordionContainer');
+            container.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>載入中...</p></div>`;
+
+            try {
+                const response = await fetch('/admin/all-group-messages', {
+                    headers: {
+                        'Authorization': 'Basic ' + authToken
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        sessionStorage.removeItem('adminAuth');
+                        window.location.href = '/admin/login';
+                        return;
+                    }
+                    throw new Error(`Failed to load messages: ${response.statusText}`);
+                }
+
+                const flatMessages = await response.json();
+                const groupedMessages = {};
+
+                for (const msg of flatMessages) {
+                    if (!groupedMessages[msg.group_id]) {
+                        groupedMessages[msg.group_id] = {
+                            group_name: msg.group_name,
+                            messages: []
+                        };
+                    }
+                    groupedMessages[msg.group_id].messages.push(msg);
+                }
+                
+                allMessages = groupedMessages;
+                renderMessages(groupedMessages);
+
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                container.innerHTML = `<div class="empty-state"><h3>載入失敗</h3><p>${error.message}</p></div>`;
+            }
+        }
+
+        function renderMessages(groupedMessages) {
+            const container = document.getElementById('accordionContainer');
+            const groupIds = Object.keys(groupedMessages);
+
+            if (groupIds.length === 0) {
+                container.innerHTML = `<div class="empty-state"><h3>沒有任何留言</h3><p>目前所有小組都沒有留言記錄</p></div>`;
+                return;
+            }
+            
+            const sortedGroupIds = groupIds.sort((a, b) => {
+                const lastMessageA = groupedMessages[a].messages[0]?.timestamp || '';
+                const lastMessageB = groupedMessages[b].messages[0]?.timestamp || '';
+                return lastMessageB.localeCompare(lastMessageA);
+            });
+
+            container.innerHTML = sortedGroupIds.map(groupId => {
+                const groupData = groupedMessages[groupId];
+                const groupName = groupData.group_name;
+                const messages = groupData.messages;
+                
+                return `
+                    <details>
+                        <summary>
+                            <span>${groupName} (${groupId})</span>
+                            <span class="message-count">${messages.length} 則留言</span>
+                        </summary>
+                        <div class="messages-container">
+                            ${messages.map(msg => `
+                                <div class="message-item">
+                                    <div class="message-header">
+                                        <span class="message-author">${msg.display_name}</span>
+                                        <span class="message-time">${formatDateTime(msg.timestamp)}</span>
+                                    </div>
+                                    <p class="message-content">${escapeHTML(msg.content)}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </details>
+                `;
+            }).join('');
+        }
+        
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            if (!searchTerm) {
+                renderMessages(allMessages);
+                return;
+            }
+
+            const filteredMessages = {};
+            for (const groupId in allMessages) {
+                const groupData = allMessages[groupId];
+                const groupName = groupData.group_name;
+                const messages = groupData.messages;
+
+                if (groupName.toLowerCase().includes(searchTerm) || groupId.toLowerCase().includes(searchTerm)) {
+                    filteredMessages[groupId] = groupData;
+                    continue;
+                }
+                
+                const matchingMessages = messages.filter(msg => 
+                    msg.content.toLowerCase().includes(searchTerm) ||
+                    msg.display_name.toLowerCase().includes(searchTerm)
+                );
+
+                if (matchingMessages.length > 0) {
+                    filteredMessages[groupId] = {
+                        group_name: groupName,
+                        messages: matchingMessages
+                    };
+                }
+            }
+            renderMessages(filteredMessages);
+        });
+
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>"']/g, function(match) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[match];
+            });
+        }
+
+        window.addEventListener('load', loadMessages);
+    </script>
+</body>
+</html>
