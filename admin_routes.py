@@ -403,13 +403,20 @@ def get_all_group_messages(admin: str = Depends(verify_admin)):
         for msg_data in raw_messages_with_group_id:
             group_id = msg_data.get('group_id')
             
+            # 確保時間格式正確，避免 JSON 序列化錯誤
+            created_at = msg_data.get("created_at")
+            if isinstance(created_at, datetime):
+                timestamp = created_at.isoformat()
+            else:
+                timestamp = str(created_at or '')
+            
             all_messages.append({
                 "group_id": group_id,
                 "group_name": group_name_cache.get(group_id, "未知小組"),
                 "display_name": msg_data.get('display_name', '未知'),
                 "content": msg_data.get('content', ''),
                 "message_type": msg_data.get('message_type', 'text'),
-                "timestamp": msg_data.get("created_at") # Map 'created_at' to 'timestamp' for the frontend
+                "timestamp": timestamp
             })
             
         return all_messages
